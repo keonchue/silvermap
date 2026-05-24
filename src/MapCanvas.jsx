@@ -1,17 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadKakaoSdk, isKakaoKeyConfigured } from './kakaoLoader.js'
 import { CATEGORIES } from './categories.js'
-import { PinIcon } from './icons.jsx'
+import { PinIcon, PlusIcon, MinusIcon, LocationIcon, NorthIcon, LayersIcon } from './icons.jsx'
 
 const catColor = (id) =>
   CATEGORIES.find((c) => c.id === id)?.color || '#1957c8'
 
 /* ===== 실제 카카오 지도 ===== */
-function RealMap({ center, userLocation, markers, routePath, onMarkerClick }) {
+function RealMap({ center, userLocation, markers, routePath, onMarkerClick, onLocateRequest, overlayOffset }) {
   const boxRef = useRef(null)
   const mapRef = useRef(null)
-  const objsRef = useRef([]) // 마커/오버레이/선 모음
+  const objsRef = useRef([])
   const [failed, setFailed] = useState(false)
+
+  function zoomIn() { mapRef.current?.setLevel(mapRef.current.getLevel() - 1) }
+  function zoomOut() { mapRef.current?.setLevel(mapRef.current.getLevel() + 1) }
+  function goToUser() {
+    if (!userLocation) { onLocateRequest?.(); return }
+    const kakao = window.kakao
+    if (mapRef.current && kakao) {
+      mapRef.current.panTo(new kakao.maps.LatLng(userLocation.lat, userLocation.lng))
+    }
+    onLocateRequest?.()
+  }
 
   // 지도 생성
   useEffect(() => {
@@ -89,7 +100,17 @@ function RealMap({ center, userLocation, markers, routePath, onMarkerClick }) {
 
   if (failed) return <DemoMap {...{ center, userLocation, markers, routePath, onMarkerClick }} note="지도를 불러오지 못했어요" />
 
-  return <div ref={boxRef} style={{ position: 'absolute', inset: 0 }} />
+  return (
+    <div style={{ position: 'absolute', inset: 0 }}>
+      <div ref={boxRef} style={{ position: 'absolute', inset: 0 }} />
+      <MapControls
+        top={overlayOffset ?? 20}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onLocation={goToUser}
+      />
+    </div>
+  )
 }
 
 /* ===== 데모 지도 (카카오 키 없을 때) ===== */
@@ -199,6 +220,38 @@ function Dot({ x, y, children }) {
       }}
     >
       {children}
+    </div>
+  )
+}
+
+function MapControls({ top, onZoomIn, onZoomOut, onLocation }) {
+  return (
+    <div style={{
+      position: 'absolute', right: 12, top,
+      display: 'flex', flexDirection: 'column', gap: 10, zIndex: 5,
+    }}>
+      {[
+        { label: '확대',   Icon: PlusIcon,     fn: onZoomIn },
+        { label: '축소',   Icon: MinusIcon,    fn: onZoomOut },
+        { label: '내 위치', Icon: LocationIcon, fn: onLocation },
+      ].map(({ label, Icon, fn }) => (
+        <button
+          key={label}
+          aria-label={label}
+          onClick={fn}
+          style={{
+            width: 54, height: 54, borderRadius: '50%',
+            background: '#fff', border: '1px solid var(--border)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: 2,
+            color: 'var(--text)',
+          }}
+        >
+          <Icon size={22} />
+          <span style={{ fontSize: 11, fontWeight: 700 }}>{label}</span>
+        </button>
+      ))}
     </div>
   )
 }

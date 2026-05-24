@@ -1,9 +1,11 @@
-import { MapIcon, SearchIcon, RouteIcon } from './icons.jsx'
+import { HomeIcon, BusIcon, NavIcon, SearchIcon, MoreIcon } from './icons.jsx'
 
 const TABS = [
-  { id: 'map', label: '지도', Icon: MapIcon },
-  { id: 'search', label: '장소 찾기', Icon: SearchIcon },
-  { id: 'directions', label: '길찾기', Icon: RouteIcon },
+  { id: 'map',        label: '홈',      Icon: HomeIcon   },
+  { id: 'transit',    label: '대중교통', Icon: BusIcon    },
+  { id: 'directions', label: '내비',    Icon: NavIcon    },
+  { id: 'search',     label: '발견',    Icon: SearchIcon },
+  { id: 'more',       label: '더보기',  Icon: MoreIcon   },
 ]
 
 export default function BottomNav({ active, onChange }) {
@@ -19,7 +21,7 @@ export default function BottomNav({ active, onChange }) {
       }}
     >
       {TABS.map(({ id, label, Icon }) => {
-        const on = active === id
+        const on = active === id || (id === 'directions' && active === 'transit')
         return (
           <button
             key={id}
@@ -31,15 +33,15 @@ export default function BottomNav({ active, onChange }) {
               flexDirection: 'column',
               alignItems: 'center',
               gap: 4,
-              padding: '12px 4px 14px',
-              minHeight: 84,
+              padding: '10px 4px 12px',
+              minHeight: 76,
               color: on ? 'var(--primary)' : 'var(--text-soft)',
               background: on ? 'var(--surface)' : 'transparent',
               fontWeight: on ? 900 : 700,
             }}
           >
-            <Icon size={36} />
-            <span style={{ fontSize: 18 }}>{label}</span>
+            <Icon size={30} />
+            <span style={{ fontSize: 15 }}>{label}</span>
           </button>
         )
       })}

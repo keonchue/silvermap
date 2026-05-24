@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import MapCanvas from './MapCanvas.jsx'
+import MapHomeOverlay from './MapHomeOverlay.jsx'
 import BottomNav from './BottomNav.jsx'
 import SearchPanel from './SearchPanel.jsx'
 import DirectionsPanel from './DirectionsPanel.jsx'
 import PlaceSheet from './PlaceSheet.jsx'
 import ReservationModal from './ReservationModal.jsx'
 import { useGeolocation, DEFAULT_CENTER } from './useGeolocation.js'
-import { usingRealApi } from './placesService.js'
-import { CloseIcon, LocationIcon } from './icons.jsx'
+import { CloseIcon } from './icons.jsx'
 
 export default function App() {
   const [tab, setTab] = useState('map')
@@ -20,11 +20,8 @@ export default function App() {
 
   const { location, status, locate } = useGeolocation()
 
-  // 첫 화면에서 위치 권한 요청
   useEffect(() => { locate() }, [locate])
-  useEffect(() => {
-    if (location) setCenter(location)
-  }, [location])
+  useEffect(() => { if (location) setCenter(location) }, [location])
 
   const origin = location || DEFAULT_CENTER
   const routePath = route?.path || null
@@ -46,28 +43,21 @@ export default function App() {
 
   function closePanel() {
     setTab('map')
+    setRoute(null)
+    setMarkers([])
   }
 
-  const headerNote = usingRealApi
-    ? null
-    : '데모 모드 — 카카오 키를 넣으면 실제 지도가 나옵니다'
+  function onTabChange(next) {
+    setSelectedPlace(null)
+    if (next === 'directions' || next === 'transit') setDirectionsSeed(null)
+    setTab(next)
+  }
+
+  // 홈 탭에서 오버레이 높이(방향바+검색바) ≈ 170px
+  const overlayOffset = tab === 'map' ? 170 : 20
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
-      <header
-        style={{
-          flexShrink: 0,
-          background: 'var(--primary)',
-          color: '#fff',
-          padding: '14px 18px',
-        }}
-      >
-        <h1 style={{ fontSize: 26, fontWeight: 900 }}>큰지도</h1>
-        <p style={{ fontSize: 15, opacity: 0.9 }}>
-          {headerNote || '어디든 쉽게 찾아갑니다'}
-        </p>
-      </header>
-
       <main style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
         <MapCanvas
           center={center}
@@ -75,28 +65,21 @@ export default function App() {
           markers={markers}
           routePath={routePath}
           onMarkerClick={onMarkerClick}
+          onLocateRequest={() => { locate(); if (location) setCenter(location) }}
+          overlayOffset={overlayOffset}
         />
 
-        {/* 지도 화면: 내 위치 버튼 */}
+        {/* 홈 탭 오버레이 */}
         {tab === 'map' && (
-          <button
-            onClick={() => { locate(); if (location) setCenter(location) }}
-            aria-label="내 위치로 이동"
-            style={{
-              position: 'absolute', right: 16, bottom: 20,
-              display: 'flex', alignItems: 'center', gap: 8,
-              minHeight: 60, padding: '0 20px', borderRadius: 30,
-              background: '#fff', color: 'var(--primary)',
-              fontSize: 18, fontWeight: 900,
-              boxShadow: 'var(--shadow)', border: '2px solid var(--border)',
-            }}
-          >
-            <LocationIcon size={28} />
-            {status === 'loading' ? '찾는 중...' : '내 위치'}
-          </button>
+          <MapHomeOverlay
+            from={origin}
+            onResults={(places) => { setMarkers(places); setTab('search') }}
+            onSelectPlace={setSelectedPlace}
+            onOpenDirections={() => setTab('directions')}
+          />
         )}
 
-        {/* 검색 / 길찾기 패널 */}
+        {/* 검색 패널 */}
         {tab === 'search' && (
           <Panel title="장소 찾기" onClose={closePanel}>
             <SearchPanel
@@ -106,27 +89,33 @@ export default function App() {
             />
           </Panel>
         )}
-        {tab === 'directions' && (
+
+        {/* 길찾기 패널 */}
+        {(tab === 'directions' || tab === 'transit') && (
           <Panel title="길찾기" onClose={closePanel}>
             <DirectionsPanel
-              key={directionsSeed?.id || 'fresh'}
+              key={directionsSeed?.id || tab}
               from={origin}
               hasMyLocation={!!location}
               initialDest={directionsSeed}
+              initialMode={tab === 'transit' ? 'transit' : 'walk'}
               onRoute={handleRoute}
               onSelectPlace={setSelectedPlace}
             />
           </Panel>
         )}
 
-        {/* 장소 상세 (위로 겹침) */}
+        {/* 더보기 패널 */}
+        {tab === 'more' && (
+          <Panel title="더보기" onClose={closePanel}>
+            <MorePanel />
+          </Panel>
+        )}
+
+        {/* 장소 상세 */}
         {selectedPlace && (
           <Overlay onClose={() => setSelectedPlace(null)}>
-            <Panel
-              title={selectedPlace.name}
-              onClose={() => setSelectedPlace(null)}
-              compactTitle
-            >
+            <Panel title={selectedPlace.name} onClose={() => setSelectedPlace(null)} compactTitle>
               <PlaceSheet
                 place={selectedPlace}
                 onDirections={openDirectionsFor}
@@ -136,27 +125,17 @@ export default function App() {
           </Overlay>
         )}
 
-        {/* 예약/결제 (최상단) */}
+        {/* 예약 */}
         {reservePlace && (
           <Overlay onClose={() => setReservePlace(null)}>
             <Panel title="예약하기" onClose={() => setReservePlace(null)}>
-              <ReservationModal
-                place={reservePlace}
-                onClose={() => setReservePlace(null)}
-              />
+              <ReservationModal place={reservePlace} onClose={() => setReservePlace(null)} />
             </Panel>
           </Overlay>
         )}
       </main>
 
-      <BottomNav
-        active={tab}
-        onChange={(next) => {
-          setSelectedPlace(null)
-          if (next === 'directions') setDirectionsSeed(null)
-          setTab(next)
-        }}
-      />
+      <BottomNav active={tab} onChange={onTabChange} />
     </div>
   )
 }
@@ -165,10 +144,7 @@ function Panel({ title, onClose, compactTitle, children }) {
   return (
     <section className="panel" role="dialog" aria-label={title}>
       <div className="panel-header">
-        <h2
-          className="panel-title"
-          style={compactTitle ? { fontSize: 'var(--fs-lg)', flex: 1 } : { flex: 1 }}
-        >
+        <h2 className="panel-title" style={compactTitle ? { fontSize: 'var(--fs-lg)', flex: 1 } : { flex: 1 }}>
           {title}
         </h2>
         <button className="icon-btn" onClick={onClose} aria-label="닫기">
@@ -186,5 +162,41 @@ function Overlay({ onClose, children }) {
       <div className="scrim" onClick={onClose} />
       {children}
     </>
+  )
+}
+
+function MorePanel() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {[
+        { label: '사용 도움말', desc: '앱 사용 방법을 알려드립니다' },
+        { label: '글자 크기 설정', desc: '화면 글자 크기를 조절합니다' },
+        { label: '자주 묻는 질문', desc: '궁금한 점을 확인하세요' },
+        { label: '앱 정보', desc: '큰지도 버전 정보' },
+      ].map(({ label, desc }) => (
+        <button
+          key={label}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+            padding: '16px 18px', background: 'var(--surface)',
+            border: '2px solid var(--border)', borderRadius: 'var(--radius)',
+            textAlign: 'left', gap: 4,
+          }}
+        >
+          <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>{label}</span>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>{desc}</span>
+        </button>
+      ))}
+
+      <div style={{
+        marginTop: 8, padding: '14px 18px',
+        background: '#fff8e1', border: '2px solid #b25e00',
+        borderRadius: 'var(--radius)', fontSize: 'var(--fs-sm)', color: '#7a3f00',
+        lineHeight: 1.7,
+      }}>
+        어려우신가요? 가족이나 주변 분에게 도움을 요청하시거나,
+        전화로 문의해 주세요.
+      </div>
+    </div>
   )
 }
