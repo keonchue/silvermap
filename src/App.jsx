@@ -17,6 +17,7 @@ export default function App() {
   const [route, setRoute] = useState(null)
   const [directionsSeed, setDirectionsSeed] = useState(null)
   const [center, setCenter] = useState(DEFAULT_CENTER)
+  const [homeSearch, setHomeSearch] = useState(null) // { places, heading }
 
   const { location, status, locate } = useGeolocation()
 
@@ -50,6 +51,7 @@ export default function App() {
   function onTabChange(next) {
     setSelectedPlace(null)
     if (next === 'directions' || next === 'transit') setDirectionsSeed(null)
+    if (next === 'search') setHomeSearch(null)
     setTab(next)
   }
 
@@ -73,7 +75,11 @@ export default function App() {
         {tab === 'map' && (
           <MapHomeOverlay
             from={origin}
-            onResults={(places) => { setMarkers(places); setTab('search') }}
+            onResults={(places, heading) => {
+              setMarkers(places)
+              setHomeSearch({ places, heading })
+              setTab('search')
+            }}
             onSelectPlace={setSelectedPlace}
             onOpenDirections={() => setTab('directions')}
           />
@@ -86,6 +92,8 @@ export default function App() {
               from={origin}
               onResults={setMarkers}
               onSelectPlace={setSelectedPlace}
+              initialResults={homeSearch?.places}
+              initialHeading={homeSearch?.heading}
             />
           </Panel>
         )}

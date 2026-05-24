@@ -64,23 +64,23 @@ export default function DirectionsPanel({ from, hasMyLocation, initialDest, init
   }
 
   function chooseDest(place) {
+    const meters = distanceMeters(from, place)
+    const r = { meters, mode, ...estimate(meters, mode) }
     setDest(place)
     setResults([])
-    setRoute(null)
-    onRoute(null)
-  }
-
-  function findRoute(nextMode = mode) {
-    if (!dest) return
-    const meters = distanceMeters(from, dest)
-    const est = estimate(meters, nextMode)
-    setRoute({ meters, mode: nextMode, ...est })
-    onRoute({ path: [from, dest], dest })
+    setSelectedCard(0)
+    setRoute(r)
+    onRoute({ path: [from, place], dest: place })
   }
 
   function switchMode(m) {
     setMode(m)
-    if (dest) findRoute(m)
+    setSelectedCard(0)
+    if (dest) {
+      const meters = distanceMeters(from, dest)
+      setRoute({ meters, mode: m, ...estimate(meters, m) })
+      onRoute({ path: [from, dest], dest })
+    }
   }
 
   function reset() {
@@ -248,7 +248,12 @@ export default function DirectionsPanel({ from, hasMyLocation, initialDest, init
       )}
 
       {!route && (
-        <button className="btn btn-primary" onClick={() => findRoute()}>
+        <button className="btn btn-primary" onClick={() => {
+          const meters = distanceMeters(from, dest)
+          const r = { meters, mode, ...estimate(meters, mode) }
+          setRoute(r)
+          onRoute({ path: [from, dest], dest })
+        }}>
           길찾기 시작하기
         </button>
       )}

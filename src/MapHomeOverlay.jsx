@@ -48,7 +48,7 @@ export default function MapHomeOverlay({ from, onResults, onSelectPlace, onOpenD
     const q = query.trim()
     if (!q) return
     const places = await searchByKeyword(q, from)
-    onResults(places)
+    onResults(places, `'${q}' 검색 결과`)
   }
 
   async function handleQuick(id) {
@@ -56,7 +56,7 @@ export default function MapHomeOverlay({ from, onResults, onSelectPlace, onOpenD
     const cat = CATEGORIES.find((c) => c.id === id)
     if (!cat) return
     const places = await searchByCategory(cat, from)
-    onResults(places)
+    onResults(places, `내 주변 ${cat.label}`)
   }
 
   function startVoice() {
@@ -179,7 +179,7 @@ export default function MapHomeOverlay({ from, onResults, onSelectPlace, onOpenD
                   boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
                 }}
               >
-                <Icon size={22} style={{ color }} />
+                <span style={{ color }}><Icon size={22} /></span>
                 {label}
               </button>
             ))}

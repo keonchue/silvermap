@@ -14,12 +14,12 @@ function saveRecent(query) {
   localStorage.setItem('recentSearches', JSON.stringify([query, ...prev].slice(0, MAX_RECENT)))
 }
 
-export default function SearchPanel({ from, onResults, onSelectPlace }) {
+export default function SearchPanel({ from, onResults, onSelectPlace, initialResults, initialHeading }) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
+  const [results, setResults] = useState(initialResults || [])
   const [loading, setLoading] = useState(false)
-  const [searched, setSearched] = useState(false)
-  const [heading, setHeading] = useState('')
+  const [searched, setSearched] = useState(!!(initialResults?.length))
+  const [heading, setHeading] = useState(initialHeading || '')
   const [recent, setRecent] = useState(getRecent)
   const [listening, setListening] = useState(false)
   const recRef = useRef(null)
