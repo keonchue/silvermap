@@ -1,0 +1,157 @@
+/* ===== SilverMap 디자인 토큰 — 노인 친화 UI =====
+   원칙: 큰 글자 / 높은 대비 / 큰 터치 영역 / 단순한 구조 */
+:root {
+  /* 색상 — 모두 WCAG AA 이상 대비 확보 */
+  --bg: #ffffff;
+  --surface: #f3f6fb;
+  --surface-2: #e8eef7;
+  --text: #15233b;        /* 본문 — 흰 배경 대비 약 13:1 */
+  --text-soft: #44546b;   /* 보조 텍스트 — 약 7:1 */
+  --primary: #1957c8;     /* 주요 버튼 — 흰 배경 대비 약 6.4:1 */
+  --primary-dark: #103f96;
+  --on-primary: #ffffff;
+  --success: #1f7a3d;
+  --danger: #c62828;
+  --warning: #b25e00;
+  --border: #c2cddd;
+  --focus: #ff8f00;       /* 포커스 링 — 주변과 강하게 대비 */
+
+  /* 글자 크기 — 기본 20px, 노인 가독성 우선 */
+  --fs-base: 20px;
+  --fs-sm: 17px;
+  --fs-lg: 24px;
+  --fs-xl: 30px;
+  --fs-xxl: 38px;
+
+  /* 간격 / 모양 */
+  --tap: 64px;            /* 최소 터치 영역 */
+  --radius: 18px;
+  --gap: 16px;
+  --shadow: 0 6px 24px rgba(21, 35, 59, 0.16);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  /* 더블탭 확대 지연 제거 */
+  touch-action: manipulation;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+/* 포커스: 키보드 사용자에게 굵고 선명한 링 */
+:focus-visible {
+  outline: 4px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+input {
+  font-family: inherit;
+  font-size: var(--fs-lg);
+}
+
+/* 모션 민감 사용자 배려 */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ===== 공통 컴포넌트 클래스 ===== */
+
+/* 큰 기본 버튼 */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--tap);
+  width: 100%;
+  padding: 0 20px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  border-radius: var(--radius);
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-primary:active { background: var(--primary-dark); }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--border);
+}
+
+.btn-success { background: var(--success); color: #fff; }
+
+.btn-ghost { background: transparent; color: var(--primary); font-weight: 700; }
+
+/* 패널: 지도 위로 올라오는 시트 */
+.panel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  border-radius: 24px 24px 0 0;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  max-height: 82%;
+  animation: slideUp 220ms ease-out;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 2px solid var(--surface-2);
+}
+.panel-title { font-size: var(--fs-xl); font-weight: 900; }
+.panel-body { padding: 16px 20px; overflow-y: auto; }
+
+/* 닫기(X) 버튼 */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  border-radius: 50%;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.icon-btn:active { background: var(--surface-2); }
+
+/* 화면 가림막 */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(21, 35, 59, 0.5);
+  animation: fadeIn 180ms ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}

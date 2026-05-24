@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(Get-Content \"C:\\\\Users\\\\Keon\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Keon-Desktop-silvermap\\\\ad67f714-585a-4e46-b456-f04d3a3baaa9\\\\tasks\\\\b16q5b98o.output\")",
+      "Bash(gh auth *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(gh repo *)"
+    ]
+  }
+}
