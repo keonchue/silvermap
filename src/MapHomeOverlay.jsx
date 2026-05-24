@@ -122,7 +122,10 @@ export default function MapHomeOverlay({ from, onResults, onSelectPlace, onOpenD
         }}>
           <form
             onSubmit={handleSearch}
-            style={{
+            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            <div style={{
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -130,31 +133,46 @@ export default function MapHomeOverlay({ from, onResults, onSelectPlace, onOpenD
               borderRadius: 30,
               padding: '0 14px',
               border: '2px solid var(--border)',
-            }}
-          >
-            <SearchIcon size={22} />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="장소 이름 검색"
-              style={{
-                flex: 1,
-                border: 'none',
-                background: 'transparent',
-                fontSize: 20,
-                padding: '11px 0',
-                outline: 'none',
-                color: 'var(--text)',
-              }}
-            />
+            }}>
+              <SearchIcon size={22} />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="장소 이름 검색"
+                enterKeyHint="search"
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  background: 'transparent',
+                  fontSize: 20,
+                  padding: '11px 0',
+                  outline: 'none',
+                  color: 'var(--text)',
+                }}
+              />
+              <button
+                type="button"
+                onClick={startVoice}
+                aria-label="음성 검색"
+                style={{ color: listening ? 'var(--danger)' : 'var(--text-soft)', flexShrink: 0 }}
+              >
+                <MicIcon size={24} />
+              </button>
+            </div>
             <button
-              type="button"
-              onClick={startVoice}
-              aria-label="음성 검색"
-              style={{ color: listening ? 'var(--danger)' : 'var(--text-soft)', flexShrink: 0 }}
+              type="submit"
+              style={{
+                flexShrink: 0,
+                background: 'var(--primary)',
+                color: '#fff',
+                borderRadius: 22,
+                padding: '11px 18px',
+                fontSize: 18,
+                fontWeight: 700,
+              }}
             >
-              <MicIcon size={24} />
+              찾기
             </button>
           </form>
 
