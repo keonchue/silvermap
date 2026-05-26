@@ -128,6 +128,13 @@ input {
   to   { transform: translateY(0); }
 }
 
+/* 전체 화면 패널 변형 (예약/대중교통) */
+.panel-full {
+  top: 0;
+  border-radius: 0;
+  max-height: 100%;
+}
+
 /* 드래그 핸들 영역 */
 .panel-handle {
   display: flex;

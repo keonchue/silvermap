@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import MapCanvas from './MapCanvas.jsx'
 import BottomNav from './BottomNav.jsx'
 import SearchPanel from './SearchPanel.jsx'
-import DirectionsPanel from './DirectionsPanel.jsx'
+import FindFlow from './FindFlow.jsx'
 import PlaceSheet from './PlaceSheet.jsx'
 import ReservationModal from './ReservationModal.jsx'
 import Tutorial from './Tutorial.jsx'
@@ -129,32 +129,28 @@ export default function App() {
           </Panel>
         )}
 
-        {/* 길찾기 패널 */}
+        {/* 길찾기 — 지도 위 오버레이, 튜토리얼이 단계별 안내 */}
         {tab === 'directions' && (
-          <Panel title="길 찾기" onClose={closePanel}>
-            <DirectionsPanel
-              key={directionsSeed?.id || 'directions'}
-              from={origin}
-              hasMyLocation={!!location}
-              initialDest={directionsSeed}
-              initialMode="walk"
-              onRoute={handleRoute}
-              onSelectPlace={setSelectedPlace}
-            />
-          </Panel>
+          <FindFlow
+            key={directionsSeed?.id || 'directions'}
+            from={origin}
+            initialDest={directionsSeed}
+            onRoute={handleRoute}
+            onTutAdvance={nextTutorialStep}
+          />
         )}
 
-        {/* 예약하기 패널 */}
+        {/* 예약하기 패널 (전체 화면) */}
         {tab === 'reserve' && (
-          <Panel title="예약하기" onClose={closePanel}>
-            <ReservePanel />
+          <Panel title="예약하기" onClose={closePanel} full>
+            <ReservePanel onTutAdvance={nextTutorialStep} />
           </Panel>
         )}
 
-        {/* 대중교통 패널 */}
+        {/* 대중교통 패널 (전체 화면) */}
         {tab === 'transit' && (
-          <Panel title="대중교통" onClose={closePanel}>
-            <TransitPanel />
+          <Panel title="대중교통" onClose={closePanel} full>
+            <TransitPanel onTutAdvance={nextTutorialStep} />
           </Panel>
         )}
 
@@ -208,8 +204,8 @@ export default function App() {
   )
 }
 
-/* ===== Panel: 지도 위로 올라오는 바텀 시트 ===== */
-function Panel({ title, onClose, compactTitle, children }) {
+/* ===== Panel: 지도 위로 올라오는 바텀 시트 (full=true이면 전체 화면) ===== */
+function Panel({ title, onClose, compactTitle, children, full }) {
   const panelRef = useRef(null)
   const touchState = useRef({ startY: null, active: false })
 
@@ -237,7 +233,7 @@ function Panel({ title, onClose, compactTitle, children }) {
   }
 
   return (
-    <section ref={panelRef} className="panel" role="dialog" aria-label={title}>
+    <section ref={panelRef} className={`panel${full ? ' panel-full' : ''}`} role="dialog" aria-label={title}>
       <div
         className="panel-handle"
         onTouchStart={onDragStart}

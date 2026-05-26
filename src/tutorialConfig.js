@@ -8,32 +8,58 @@ export const TUTORIALS = {
     {
       id: 'dest-input',
       target: '[data-tutorial="dest-input"]',
-      message: '목적지를 검색해주세요.',
+      message: '목적지를 검색해주세요. 검색 후 결과를 눌러주세요.',
       position: 'below',
-      clickAdvances: false, // 검색창 클릭(포커스)만으로는 넘어가지 않음 — 직접 "알겠어요" 눌러야 진행
+      clickAdvances: false,
     },
     {
       id: 'dest-result',
       target: '[data-tutorial="dest-result"]',
-      message: '목적지를 눌러서 방향을 살펴보세요.',
-      position: 'above',
-    },
-    {
-      id: 'my-location',
-      target: '[data-tutorial="my-location"]',
-      message: "'내 위치'를 눌러 출발지를 정해요.",
+      message: '여기를 눌러 목적지를 선택하세요.',
       position: 'below',
+      clickAdvances: false, // FindFlow의 selectDest에서 programmatic하게 진행
     },
     {
       id: 'go',
       target: '[data-tutorial="go"]',
       message: "경로를 확인했어요! '안내 시작'을 눌러요.",
       position: 'above',
+      clickAdvances: false, // FindFlow의 startNav에서 programmatic하게 진행
+    },
+  ],
+  reserve: [
+    {
+      id: 'reserve-search',
+      target: '[data-tutorial="reserve-search"]',
+      message: '예약할 장소를 검색하거나 아래 목록에서 선택하세요.',
+      position: 'below',
+      clickAdvances: false,
+    },
+    {
+      id: 'reserve-result',
+      target: '[data-tutorial="reserve-result"]',
+      message: '장소를 눌러 선택하세요.',
+      position: 'below',
+    },
+  ],
+  transit: [
+    {
+      id: 'transit-toggle',
+      target: '[data-tutorial="transit-toggle"]',
+      message: '버스 또는 지하철을 선택하세요.',
+      position: 'below',
+    },
+    {
+      id: 'transit-card',
+      target: '[data-tutorial="transit-card"]',
+      message: '도착 시간을 확인하세요. 30초마다 자동으로 새로고침 됩니다.',
+      position: 'above',
+      clickAdvances: false,
     },
   ],
 }
 
-export const TUTORIAL_VERSION = 'v2'
+export const TUTORIAL_VERSION = 'v3'
 const SEEN_KEY = (tab) => `silvermap.tut.${TUTORIAL_VERSION}.${tab}`
 
 export function isTutorialSeen(tab) {

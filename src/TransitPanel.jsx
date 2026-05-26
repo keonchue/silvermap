@@ -59,7 +59,7 @@ export default function TransitPanel() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* 버스 / 지하철 토글 */}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div data-tutorial="transit-toggle" style={{ display: 'flex', gap: 8 }}>
         {[
           { id: 'bus',    label: '🚌 버스'   },
           { id: 'subway', label: '🚇 지하철' },
@@ -119,13 +119,13 @@ export default function TransitPanel() {
         buses.length === 0 ? (
           <EmptyState msg="검색된 버스가 없습니다." />
         ) : (
-          buses.map((b) => <BusCard key={b.id} bus={b} tick={tick} />)
+          buses.map((b, i) => <BusCard key={b.id} bus={b} tick={tick} first={i === 0} />)
         )
       ) : (
         subways.length === 0 ? (
           <EmptyState msg="검색된 지하철이 없습니다." />
         ) : (
-          subways.map((s) => <SubwayCard key={s.id} subway={s} tick={tick} />)
+          subways.map((s, i) => <SubwayCard key={s.id} subway={s} tick={tick} first={i === 0} />)
         )
       )}
 
@@ -141,18 +141,20 @@ export default function TransitPanel() {
   )
 }
 
-function BusCard({ bus, tick }) {
+function BusCard({ bus, tick, first }) {
   const color = BUS_COLORS[bus.type] ?? '#0052a4'
-  // tick 기준으로 남은 시간 감소 시뮬레이션
   const remaining = Math.max(1, bus.min - tick)
   const urgent = remaining <= 3
 
   return (
-    <div style={{
-      background: '#fff', border: '2px solid var(--border)',
-      borderRadius: 'var(--radius)', padding: '16px 18px',
-      display: 'flex', gap: 14, alignItems: 'center',
-    }}>
+    <div
+      data-tutorial={first ? 'transit-card' : undefined}
+      style={{
+        background: '#fff', border: '2px solid var(--border)',
+        borderRadius: 'var(--radius)', padding: '16px 18px',
+        display: 'flex', gap: 14, alignItems: 'center',
+      }}
+    >
       {/* 노선 번호 배지 */}
       <div style={{
         background: color, color: '#fff', borderRadius: 10,
@@ -184,16 +186,19 @@ function BusCard({ bus, tick }) {
   )
 }
 
-function SubwayCard({ subway, tick }) {
+function SubwayCard({ subway, tick, first }) {
   const remaining = Math.max(1, subway.min - tick)
   const urgent = remaining <= 2
 
   return (
-    <div style={{
-      background: '#fff', border: '2px solid var(--border)',
-      borderRadius: 'var(--radius)', padding: '16px 18px',
-      display: 'flex', gap: 14, alignItems: 'center',
-    }}>
+    <div
+      data-tutorial={first ? 'transit-card' : undefined}
+      style={{
+        background: '#fff', border: '2px solid var(--border)',
+        borderRadius: 'var(--radius)', padding: '16px 18px',
+        display: 'flex', gap: 14, alignItems: 'center',
+      }}
+    >
       {/* 호선 원형 배지 */}
       <div style={{
         background: subway.color, color: '#fff',

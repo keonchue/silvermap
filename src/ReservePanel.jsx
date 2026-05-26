@@ -39,7 +39,7 @@ const AVAILABLE_DATES = [
   '5월 30일 (금)', '6월 2일 (월)',  '6월 3일 (화)',
 ]
 
-export default function ReservePanel() {
+export default function ReservePanel({ onTutAdvance }) {
   const [step, setStep]           = useState(0) // 0:검색 1:장소 2:예약상세 3:결제 4:완료
   const [query, setQuery]         = useState('')
   const [results, setResults]     = useState(PLACES_MOCK)
@@ -156,7 +156,7 @@ function SearchStep({ query, setQuery, results, onSearch, onSelect }) {
     <>
       <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>어디를 예약할까요?</p>
 
-      <form onSubmit={onSearch} style={{ display: 'flex', gap: 8 }}>
+      <form data-tutorial="reserve-search" onSubmit={onSearch} style={{ display: 'flex', gap: 8 }}>
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', gap: 8,
           background: 'var(--surface)', border: '2px solid var(--border)',
@@ -181,9 +181,10 @@ function SearchStep({ query, setQuery, results, onSearch, onSelect }) {
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {results.map((p) => (
+        {results.map((p, i) => (
           <button
             key={p.id}
+            data-tutorial={i === 0 ? 'reserve-result' : undefined}
             onClick={() => onSelect(p)}
             style={{
               textAlign: 'left', background: '#fff',

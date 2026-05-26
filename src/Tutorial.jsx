@@ -91,23 +91,8 @@ export default function Tutorial({ steps, stepIndex, onNext, onClose }) {
 
   if (!step) return null
 
-  // 타겟이 아직 화면에 없을 때
-  if (!rect) {
-    return (
-      <div className="tut-root">
-        <div className="tut-dim tut-dim-full" />
-        <div className="tut-bubble tut-bubble-center">
-          <Guide />
-          <div className="tut-bubble-body">
-            <p>다음 단계 화면을 준비하고 있어요...</p>
-            <div className="tut-bubble-actions">
-              <button onClick={onClose} className="tut-skip">건너뛰기</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // 타겟이 아직 화면에 없을 때 — 조용히 숨어서 기다림 (전체 dim은 상호작용을 막으므로 사용 안 함)
+  if (!rect) return null
 
   const PAD = 8
   const sx = rect.x - PAD
