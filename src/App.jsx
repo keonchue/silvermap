@@ -5,7 +5,6 @@ import SearchPanel from './SearchPanel.jsx'
 import DirectionsPanel from './DirectionsPanel.jsx'
 import PlaceSheet from './PlaceSheet.jsx'
 import ReservationModal from './ReservationModal.jsx'
-import Compass from './Compass.jsx'
 import Tutorial from './Tutorial.jsx'
 import DirectionBanner from './DirectionBanner.jsx'
 import TransitPanel from './TransitPanel.jsx'
@@ -116,8 +115,6 @@ export default function App() {
           overlayOffset={16}
         />
 
-        {/* 지도 중앙 방향 화살표 (기능 1-B) */}
-        <Compass topOffset={10} />
 
         {/* 검색 결과 패널 (배너 검색용) */}
         {tab === 'search-result' && searchResult && (

@@ -10,6 +10,7 @@ export const TUTORIALS = {
       target: '[data-tutorial="dest-input"]',
       message: '목적지를 검색해주세요.',
       position: 'below',
+      clickAdvances: false, // 검색창 클릭(포커스)만으로는 넘어가지 않음 — 직접 "알겠어요" 눌러야 진행
     },
     {
       id: 'dest-result',

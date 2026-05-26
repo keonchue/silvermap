@@ -76,12 +76,13 @@ export default function Tutorial({ steps, stepIndex, onNext, onClose }) {
   }, [rect, step])
 
   // 강조 요소 클릭 시 다음 단계로 자동 진행 (이벤트 버블링 유지)
+  // clickAdvances: false 인 단계는 클릭으로 자동 진행하지 않음
   const handleTargetClick = useCallback(() => {
     onNext()
   }, [onNext])
 
   useEffect(() => {
-    if (!step?.target || !rect) return
+    if (!step?.target || !rect || step.clickAdvances === false) return
     const el = document.querySelector(step.target)
     if (!el) return
     el.addEventListener('click', handleTargetClick)
