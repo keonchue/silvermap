@@ -233,12 +233,13 @@ function MapControls({ top, onZoomIn, onZoomOut, onLocation }) {
       {[
         { label: '확대',   Icon: PlusIcon,     fn: onZoomIn },
         { label: '축소',   Icon: MinusIcon,    fn: onZoomOut },
-        { label: '내 위치', Icon: LocationIcon, fn: onLocation },
-      ].map(({ label, Icon, fn }) => (
+        { label: '내 위치', Icon: LocationIcon, fn: onLocation, tutAttr: 'my-location' },
+      ].map(({ label, Icon, fn, tutAttr }) => (
         <button
           key={label}
           aria-label={label}
           onClick={fn}
+          data-tutorial={tutAttr}
           style={{
             width: 54, height: 54, borderRadius: '50%',
             background: '#fff', border: '1px solid var(--border)',

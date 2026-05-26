@@ -238,3 +238,36 @@ export const VolumeIcon = (p) => (
     <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
   </Svg>
 )
+
+export const CalendarIcon = (p) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="18" rx="3" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+    <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" strokeWidth="3" />
+  </Svg>
+)
+
+export const TrainIcon = (p) => (
+  <Svg {...p}>
+    <rect x="5" y="2" width="14" height="16" rx="4" />
+    <path d="M5 10h14M8 22l4-4 4 4" />
+    <circle cx="9" cy="14" r="1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="14" r="1" fill="currentColor" stroke="none" />
+  </Svg>
+)
+
+export const RefreshIcon = (p) => (
+  <Svg {...p}>
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+  </Svg>
+)
+
+export const GridIcon = (p) => (
+  <Svg {...p}>
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </Svg>
+)

@@ -1,30 +1,61 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import MapCanvas from './MapCanvas.jsx'
-import MapHomeOverlay from './MapHomeOverlay.jsx'
 import BottomNav from './BottomNav.jsx'
 import SearchPanel from './SearchPanel.jsx'
 import DirectionsPanel from './DirectionsPanel.jsx'
 import PlaceSheet from './PlaceSheet.jsx'
 import ReservationModal from './ReservationModal.jsx'
+import Compass from './Compass.jsx'
+import Tutorial from './Tutorial.jsx'
+import DirectionBanner from './DirectionBanner.jsx'
+import TransitPanel from './TransitPanel.jsx'
+import ReservePanel from './ReservePanel.jsx'
+import {
+  TUTORIALS, isTutorialSeen, markTutorialSeen, resetAllTutorials,
+} from './tutorialConfig.js'
 import { useGeolocation, DEFAULT_CENTER } from './useGeolocation.js'
 import { CloseIcon } from './icons.jsx'
+import { searchByKeyword } from './placesService.js'
 
 export default function App() {
-  const [tab, setTab] = useState('map')
-  const [markers, setMarkers] = useState([])
+  // tab: null = 지도만, 'directions' | 'reserve' | 'transit' | 'more' = 패널 열림
+  const [tab, setTab]                   = useState(null)
+  const [markers, setMarkers]           = useState([])
   const [selectedPlace, setSelectedPlace] = useState(null)
-  const [reservePlace, setReservePlace] = useState(null)
-  const [route, setRoute] = useState(null)
+  const [reservePlace, setReservePlace]   = useState(null)
+  const [route, setRoute]               = useState(null)
   const [directionsSeed, setDirectionsSeed] = useState(null)
-  const [center, setCenter] = useState(DEFAULT_CENTER)
-  const [homeSearch, setHomeSearch] = useState(null) // { places, heading }
+  const [center, setCenter]             = useState(DEFAULT_CENTER)
+  const [searchResult, setSearchResult] = useState(null) // { places, query }
 
-  const { location, status, locate } = useGeolocation()
+  // 튜토리얼 상태
+  const [tutTab, setTutTab]   = useState(null)
+  const [tutStep, setTutStep] = useState(0)
+  const tutSteps = tutTab ? TUTORIALS[tutTab] : null
 
+  function maybeStartTutorial(nextTab) {
+    if (TUTORIALS[nextTab] && !isTutorialSeen(nextTab)) {
+      setTutTab(nextTab); setTutStep(0)
+    }
+  }
+  function nextTutorialStep() {
+    if (!tutSteps) return
+    if (tutStep + 1 >= tutSteps.length) {
+      markTutorialSeen(tutTab); setTutTab(null); setTutStep(0)
+    } else {
+      setTutStep(tutStep + 1)
+    }
+  }
+  function closeTutorial() {
+    if (tutTab) markTutorialSeen(tutTab)
+    setTutTab(null); setTutStep(0)
+  }
+
+  const { location, locate } = useGeolocation()
   useEffect(() => { locate() }, [locate])
   useEffect(() => { if (location) setCenter(location) }, [location])
 
-  const origin = location || DEFAULT_CENTER
+  const origin    = location || DEFAULT_CENTER
   const routePath = route?.path || null
 
   const onMarkerClick = useCallback((place) => setSelectedPlace(place), [])
@@ -43,24 +74,38 @@ export default function App() {
   }
 
   function closePanel() {
-    setTab('map')
+    setTab(null)
     setRoute(null)
     setMarkers([])
+    setSearchResult(null)
   }
 
   function onTabChange(next) {
     setSelectedPlace(null)
-    if (next === 'directions' || next === 'transit') setDirectionsSeed(null)
-    if (next === 'search') setHomeSearch(null)
+    if (tab === next) { closePanel(); return } // 같은 탭 다시 → 닫기
+    if (next !== 'directions') setDirectionsSeed(null)
     setTab(next)
+    maybeStartTutorial(next)
   }
 
-  // 홈 탭에서 오버레이 높이(방향바+검색바) ≈ 170px + safe area
-  const overlayOffset = tab === 'map' ? 170 : 20
+  // 최상단 검색창에서 장소 검색
+  async function onBannerSearch(query) {
+    if (!query) return
+    const places = await searchByKeyword(query, origin)
+    setMarkers(places)
+    setSearchResult({ places, query })
+    // 패널이 없으면 검색 결과 패널 열기
+    if (!tab) setTab('search-result')
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+      {/* ① 최상단: 방향 배너 + 검색창 */}
+      <DirectionBanner onSearch={onBannerSearch} />
+
+      {/* ② 중앙: 지도 영역 */}
       <main style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
+        {/* 카카오 지도 */}
         <MapCanvas
           center={center}
           userLocation={location}
@@ -68,59 +113,66 @@ export default function App() {
           routePath={routePath}
           onMarkerClick={onMarkerClick}
           onLocateRequest={() => { locate(); if (location) setCenter(location) }}
-          overlayOffset={overlayOffset}
+          overlayOffset={16}
         />
 
-        {/* 홈 탭 오버레이 */}
-        {tab === 'map' && (
-          <MapHomeOverlay
-            from={origin}
-            onResults={(places, heading) => {
-              setMarkers(places)
-              setHomeSearch({ places, heading })
-              setTab('search')
-            }}
-            onSelectPlace={setSelectedPlace}
-            onOpenDirections={() => setTab('directions')}
-          />
-        )}
+        {/* 지도 중앙 방향 화살표 (기능 1-B) */}
+        <Compass topOffset={10} />
 
-        {/* 검색 패널 */}
-        {tab === 'search' && (
-          <Panel title="장소 찾기" onClose={closePanel}>
+        {/* 검색 결과 패널 (배너 검색용) */}
+        {tab === 'search-result' && searchResult && (
+          <Panel title={`'${searchResult.query}' 검색 결과`} onClose={closePanel}>
             <SearchPanel
               from={origin}
               onResults={setMarkers}
               onSelectPlace={setSelectedPlace}
-              initialResults={homeSearch?.places}
-              initialHeading={homeSearch?.heading}
+              initialResults={searchResult.places}
+              initialHeading={searchResult.query}
             />
           </Panel>
         )}
 
         {/* 길찾기 패널 */}
-        {(tab === 'directions' || tab === 'transit') && (
-          <Panel title="길찾기" onClose={closePanel}>
+        {tab === 'directions' && (
+          <Panel title="길 찾기" onClose={closePanel}>
             <DirectionsPanel
-              key={directionsSeed?.id || tab}
+              key={directionsSeed?.id || 'directions'}
               from={origin}
               hasMyLocation={!!location}
               initialDest={directionsSeed}
-              initialMode={tab === 'transit' ? 'transit' : 'walk'}
+              initialMode="walk"
               onRoute={handleRoute}
               onSelectPlace={setSelectedPlace}
             />
           </Panel>
         )}
 
-        {/* 더보기 패널 */}
-        {tab === 'more' && (
-          <Panel title="더보기" onClose={closePanel}>
-            <MorePanel />
+        {/* 예약하기 패널 */}
+        {tab === 'reserve' && (
+          <Panel title="예약하기" onClose={closePanel}>
+            <ReservePanel />
           </Panel>
         )}
 
-        {/* 장소 상세 */}
+        {/* 대중교통 패널 */}
+        {tab === 'transit' && (
+          <Panel title="대중교통" onClose={closePanel}>
+            <TransitPanel />
+          </Panel>
+        )}
+
+        {/* 더보기 패널 */}
+        {tab === 'more' && (
+          <Panel title="더 보기" onClose={closePanel}>
+            <MorePanel onReplayTutorials={() => {
+              resetAllTutorials()
+              setTab('directions')
+              maybeStartTutorial('directions')
+            }} />
+          </Panel>
+        )}
+
+        {/* 장소 상세 시트 */}
         {selectedPlace && (
           <Overlay onClose={() => setSelectedPlace(null)}>
             <Panel title={selectedPlace.name} onClose={() => setSelectedPlace(null)} compactTitle>
@@ -133,7 +185,7 @@ export default function App() {
           </Overlay>
         )}
 
-        {/* 예약 */}
+        {/* 예약 모달 (장소 상세에서 예약하기 버튼) */}
         {reservePlace && (
           <Overlay onClose={() => setReservePlace(null)}>
             <Panel title="예약하기" onClose={() => setReservePlace(null)}>
@@ -143,11 +195,23 @@ export default function App() {
         )}
       </main>
 
+      {/* ③ 하단: 4탭 네비게이션 */}
       <BottomNav active={tab} onChange={onTabChange} />
+
+      {/* 게임식 튜토리얼 오버레이 */}
+      {tutSteps && (
+        <Tutorial
+          steps={tutSteps}
+          stepIndex={tutStep}
+          onNext={nextTutorialStep}
+          onClose={closeTutorial}
+        />
+      )}
     </div>
   )
 }
 
+/* ===== Panel: 지도 위로 올라오는 바텀 시트 ===== */
 function Panel({ title, onClose, compactTitle, children }) {
   const panelRef = useRef(null)
   const touchState = useRef({ startY: null, active: false })
@@ -156,16 +220,12 @@ function Panel({ title, onClose, compactTitle, children }) {
     touchState.current = { startY: e.touches[0].clientY, active: true }
     if (panelRef.current) panelRef.current.style.transition = 'none'
   }
-
   function onDragMove(e) {
     const { startY, active } = touchState.current
     if (!active) return
     const dy = e.touches[0].clientY - startY
-    if (dy > 0 && panelRef.current) {
-      panelRef.current.style.transform = `translateY(${dy}px)`
-    }
+    if (dy > 0 && panelRef.current) panelRef.current.style.transform = `translateY(${dy}px)`
   }
-
   function onDragEnd(e) {
     const { startY, active } = touchState.current
     if (!active) return
@@ -216,17 +276,19 @@ function Overlay({ onClose, children }) {
   )
 }
 
-function MorePanel() {
+function MorePanel({ onReplayTutorials }) {
+  const items = [
+    { label: '사용 도움말 다시 보기', desc: '튜토리얼을 처음부터 다시 보여드려요', onClick: onReplayTutorials },
+    { label: '글자 크기 설정', desc: '화면 글자 크기를 조절합니다' },
+    { label: '자주 묻는 질문', desc: '궁금한 점을 확인하세요' },
+    { label: '앱 정보', desc: '큰지도 버전 정보' },
+  ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {[
-        { label: '사용 도움말', desc: '앱 사용 방법을 알려드립니다' },
-        { label: '글자 크기 설정', desc: '화면 글자 크기를 조절합니다' },
-        { label: '자주 묻는 질문', desc: '궁금한 점을 확인하세요' },
-        { label: '앱 정보', desc: '큰지도 버전 정보' },
-      ].map(({ label, desc }) => (
+      {items.map(({ label, desc, onClick }) => (
         <button
           key={label}
+          onClick={onClick}
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
             padding: '16px 18px', background: 'var(--surface)',
@@ -238,7 +300,6 @@ function MorePanel() {
           <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>{desc}</span>
         </button>
       ))}
-
       <div style={{
         marginTop: 8, padding: '14px 18px',
         background: '#fff8e1', border: '2px solid #b25e00',
