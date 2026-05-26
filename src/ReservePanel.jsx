@@ -34,6 +34,13 @@ const PLACES_MOCK = [
   },
 ]
 
+// 검색 결과로 선택된 장소에 programs 정보가 없을 때 사용하는 기본값
+const DEFAULT_PROGRAMS = [
+  { id: 'def-1', name: '방문 예약',    time: '평일 09:00 ~ 18:00', price: 0,     days: ['월', '화', '수', '목', '금'] },
+  { id: 'def-2', name: '전화 상담',    time: '평일 10:00 ~ 16:00', price: 0,     days: ['월', '화', '수', '목', '금'] },
+  { id: 'def-3', name: '프로그램 문의', time: '평일 09:00 ~ 17:00', price: 5000, days: ['화', '목'] },
+]
+
 const AVAILABLE_DATES = [
   '5월 27일 (화)', '5월 28일 (수)', '5월 29일 (목)',
   '5월 30일 (금)', '6월 2일 (월)',  '6월 3일 (화)',
@@ -207,6 +214,7 @@ function SearchStep({ query, setQuery, results, onSearch, onSelect }) {
 }
 
 function PlaceDetailStep({ place, onSelect }) {
+  const programs = place.programs || DEFAULT_PROGRAMS
   return (
     <>
       {/* 장소 요약 카드 */}
@@ -218,15 +226,17 @@ function PlaceDetailStep({ place, onSelect }) {
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 4 }}>
           {place.address}
         </div>
-        <div style={{ fontSize: 'var(--fs-base)', color: '#f59e0b', marginTop: 6 }}>
-          ★ {place.rating}
-        </div>
+        {place.rating && (
+          <div style={{ fontSize: 'var(--fs-base)', color: '#f59e0b', marginTop: 6 }}>
+            ★ {place.rating}
+          </div>
+        )}
       </div>
 
       <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>어떤 프로그램을 예약할까요?</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {place.programs.map((pr) => (
+        {programs.map((pr) => (
           <button
             key={pr.id}
             onClick={() => onSelect(pr)}

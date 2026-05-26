@@ -1,31 +1,6 @@
 import { useEffect, useState } from 'react'
 import { RefreshIcon } from './icons.jsx'
-
-// 목업 버스 데이터 (공공 API 키 없을 때 폴백)
-const BUS_MOCK = [
-  { id: '1', route: '273',        dest: '서울역 방향',    stops: 2, min: 3,  type: 'trunk'  },
-  { id: '2', route: '3412',       dest: '잠실 방향',      stops: 5, min: 7,  type: 'branch' },
-  { id: '3', route: '마을버스 04', dest: '사당역 방향',    stops: 1, min: 2,  type: 'local'  },
-  { id: '4', route: '401',        dest: '강남역 방향',    stops: 8, min: 12, type: 'express'},
-  { id: '5', route: '472',        dest: '노원역 방향',    stops: 3, min: 5,  type: 'trunk'  },
-]
-
-// 목업 지하철 데이터
-const SUBWAY_MOCK = [
-  { id: '1', line: '2', name: '2호선', dest: '외선순환 (성수행)',        min: 2, color: '#00a84d' },
-  { id: '2', line: '2', name: '2호선', dest: '내선순환 (까치산행)',      min: 5, color: '#00a84d' },
-  { id: '3', line: '9', name: '9호선', dest: '급행 (김포공항행)',        min: 3, color: '#d4a017' },
-  { id: '4', line: '9', name: '9호선', dest: '완행 (중앙보훈병원행)',    min: 8, color: '#d4a017' },
-  { id: '5', line: '3', name: '3호선', dest: '대화 방면 (지축행)',       min: 6, color: '#ef7c1c' },
-]
-
-// 버스 종류별 색상 (서울시 표준)
-const BUS_COLORS = {
-  trunk:   '#0052a4', // 간선 파란색
-  branch:  '#53b332', // 지선 초록색
-  local:   '#5bb025', // 마을버스 연두색
-  express: '#f72f08', // 급행 빨간색
-}
+import { loadNearbyBusStops, loadNearbySubwayStations } from './transitService.js'
 
 function speak(text) {
   if (!window.speechSynthesis) return
@@ -35,18 +10,54 @@ function speak(text) {
   window.speechSynthesis.speak(u)
 }
 
-export default function TransitPanel({ onTutAdvance, externalQuery = '' }) {
-  const [mode, setMode]           = useState('bus')    // 'bus' | 'subway'
-  const [query, setQuery]         = useState(externalQuery)
-  const [lastUpdated, setLastUpdated] = useState(new Date())
-  const [tick, setTick]           = useState(0)
+function fmtDist(m) {
+  if (m == null) return ''
+  return m < 1000 ? `${m}m` : `${(m / 1000).toFixed(1)}km`
+}
+
+export default function TransitPanel({ onTutAdvance, externalQuery = '', userLocation }) {
+  const [mode, setMode]         = useState('bus')
+  const [busStops, setBusStops] = useState([])
+  const [subways, setSubways]   = useState([])
+  const [loading, setLoading]   = useState(false)
+  const [tick, setTick]         = useState(0)
   const [selectedId, setSelectedId] = useState(null)
+  const [lastUpdated, setLastUpdated] = useState(new Date())
 
+  // 주변 정류장/역 로드
   useEffect(() => {
-    if (externalQuery) setQuery(externalQuery)
-  }, [externalQuery])
+    let alive = true
+    async function load() {
+      setLoading(true)
+      const [buses, subway] = await Promise.all([
+        loadNearbyBusStops(userLocation),
+        loadNearbySubwayStations(userLocation),
+      ])
+      if (!alive) return
+      setBusStops(buses)
+      setSubways(subway)
+      setLoading(false)
+    }
+    load()
+    return () => { alive = false }
+  }, [userLocation])
 
-  // 30초마다 자동 갱신
+  // 외부 검색어 변경 시 재검색
+  useEffect(() => {
+    if (!externalQuery) return
+    let alive = true
+    setLoading(true)
+    Promise.all([
+      loadNearbyBusStops(userLocation, externalQuery),
+      loadNearbySubwayStations(userLocation, externalQuery),
+    ]).then(([buses, subway]) => {
+      if (!alive) return
+      setBusStops(buses); setSubways(subway); setLoading(false)
+    })
+    return () => { alive = false }
+  }, [externalQuery]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 30초마다 ETA 갱신 (시뮬레이션)
   useEffect(() => {
     const id = setInterval(() => {
       setLastUpdated(new Date())
@@ -60,14 +71,12 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '' }) {
     setTick((t) => t + 1)
   }
 
-  const buses = BUS_MOCK.filter(
-    (b) => !query || b.route.includes(query) || b.dest.includes(query)
-  )
-  const subways = SUBWAY_MOCK.filter(
-    (s) => !query || s.name.includes(query) || s.dest.includes(query)
-  )
+  const filteredBus    = busStops
+  const filteredSubway = subways
 
   const timeStr = `${lastUpdated.getHours()}:${String(lastUpdated.getMinutes()).padStart(2, '0')}`
+
+  const list = mode === 'bus' ? filteredBus : filteredSubway
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -79,7 +88,7 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '' }) {
         ].map(({ id, label }) => (
           <button
             key={id}
-            onClick={() => setMode(id)}
+            onClick={() => { setMode(id); setSelectedId(null) }}
             style={{
               flex: 1, padding: '14px 0',
               borderRadius: 'var(--radius)',
@@ -95,11 +104,9 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '' }) {
         ))}
       </div>
 
-      {/* 갱신 시각 + 새로고침 버튼 */}
+      {/* 갱신 정보 */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 15, color: 'var(--text-soft)' }}>
-          {timeStr} 기준
-        </span>
+        <span style={{ fontSize: 15, color: 'var(--text-soft)' }}>{timeStr} 기준</span>
         <button
           onClick={refresh}
           style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--primary)', fontSize: 15, fontWeight: 700 }}
@@ -110,58 +117,50 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '' }) {
       </div>
 
       {/* 목록 */}
-      {mode === 'bus' ? (
-        buses.length === 0 ? (
-          <EmptyState msg="검색된 버스가 없습니다." />
-        ) : (
-          buses.map((b, i) => (
-            <BusCard
-              key={b.id} bus={b} tick={tick} first={i === 0}
-              selected={selectedId === b.id}
-              onSelect={() => {
-                setSelectedId(b.id)
-                const remaining = Math.max(1, b.min - tick)
-                speak(`${b.route}번 버스, ${remaining}분 후 도착합니다.`)
-                if (onTutAdvance) onTutAdvance()
-              }}
-            />
-          ))
-        )
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 32, fontSize: 'var(--fs-base)', color: 'var(--text-soft)' }}>
+          주변 {mode === 'bus' ? '정류장' : '역'} 찾는 중...
+        </div>
+      ) : list.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 32, fontSize: 'var(--fs-base)', color: 'var(--text-soft)' }}>
+          주변 {mode === 'bus' ? '정류장' : '지하철역'}이 없습니다.
+        </div>
       ) : (
-        subways.length === 0 ? (
-          <EmptyState msg="검색된 지하철이 없습니다." />
-        ) : (
-          subways.map((s, i) => (
-            <SubwayCard
-              key={s.id} subway={s} tick={tick} first={i === 0}
-              selected={selectedId === s.id}
-              onSelect={() => {
-                setSelectedId(s.id)
-                const remaining = Math.max(1, s.min - tick)
-                speak(`${s.dest}, ${remaining}분 후 도착합니다.`)
-                if (onTutAdvance) onTutAdvance()
-              }}
-            />
-          ))
-        )
+        list.map((item, i) => (
+          <TransitCard
+            key={item.id}
+            item={item}
+            tick={tick}
+            isSubway={mode === 'subway'}
+            first={i === 0}
+            selected={selectedId === item.id}
+            onSelect={() => {
+              setSelectedId(item.id)
+              const eta = Math.max(1, item.eta - Math.floor(tick / 2))
+              const msg = mode === 'subway'
+                ? `${item.name}, 도보 약 ${eta}분 거리입니다.`
+                : `${item.name}, 약 ${eta}분 후 도착합니다.`
+              speak(msg)
+              if (onTutAdvance) onTutAdvance()
+            }}
+          />
+        ))
       )}
 
-      {/* 실제 API 미연동 안내 */}
       <div style={{
-        marginTop: 8, padding: '12px 16px',
+        marginTop: 4, padding: '12px 16px',
         background: '#fff8e1', border: '1px solid #b25e00',
         borderRadius: 12, fontSize: 15, color: '#7a3f00', lineHeight: 1.7,
       }}>
-        현재 시범 데이터로 표시 중입니다. 실시간 정보는 공공데이터포털 API 연동 후 제공됩니다.
+        위치 정보는 카카오에서 제공합니다. 도착 시간은 추정값이며 공공데이터 API 연동 후 실시간 제공됩니다.
       </div>
     </div>
   )
 }
 
-function BusCard({ bus, tick, first, selected, onSelect }) {
-  const color = BUS_COLORS[bus.type] ?? '#0052a4'
-  const remaining = Math.max(1, bus.min - tick)
-  const urgent = remaining <= 3
+function TransitCard({ item, tick, isSubway, first, selected, onSelect }) {
+  const eta = Math.max(1, item.eta - Math.floor(tick / 2))
+  const urgent = !isSubway && eta <= 3
 
   return (
     <button
@@ -176,92 +175,44 @@ function BusCard({ bus, tick, first, selected, onSelect }) {
         transition: 'all 150ms',
       }}
     >
-      {/* 노선 번호 배지 */}
+      {/* 아이콘 배지 */}
       <div style={{
-        background: color, color: '#fff', borderRadius: 10,
-        padding: '8px 12px', fontWeight: 900, fontSize: 20,
-        flexShrink: 0, minWidth: 70, textAlign: 'center',
-      }}>
-        {bus.route}
-      </div>
-
-      {/* 방향 + 정류장 */}
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>{bus.dest}</div>
-        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 3 }}>
-          {bus.stops}번째 전 정류장
-        </div>
-      </div>
-
-      {/* 도착 시간 */}
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{
-          fontSize: 'var(--fs-xl)', fontWeight: 900,
-          color: urgent ? 'var(--danger)' : 'var(--text)',
-        }}>
-          {urgent ? '곧 도착' : `${remaining}분`}
-        </div>
-        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>후 도착</div>
-      </div>
-    </button>
-  )
-}
-
-function SubwayCard({ subway, tick, first, selected, onSelect }) {
-  const remaining = Math.max(1, subway.min - tick)
-  const urgent = remaining <= 2
-
-  return (
-    <button
-      data-tutorial={first ? 'transit-card' : undefined}
-      onClick={onSelect}
-      style={{
-        width: '100%', textAlign: 'left',
-        background: selected ? '#eef4ff' : '#fff',
-        border: selected ? '2px solid var(--primary)' : '2px solid var(--border)',
-        borderRadius: 'var(--radius)', padding: '16px 18px',
-        display: 'flex', gap: 14, alignItems: 'center',
-        transition: 'all 150ms',
-      }}
-    >
-      {/* 호선 원형 배지 */}
-      <div style={{
-        background: subway.color, color: '#fff',
-        borderRadius: '50%', width: 50, height: 50,
+        background: isSubway ? '#3a5bc7' : '#0052a4',
+        color: '#fff', borderRadius: 10,
+        width: 50, height: 50, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontWeight: 900, fontSize: 22, flexShrink: 0,
+        fontSize: 26,
       }}>
-        {subway.line}
+        {isSubway ? '🚇' : '🚌'}
       </div>
 
-      {/* 호선명 + 방향 */}
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 'var(--fs-sm)', color: subway.color, fontWeight: 700 }}>
-          {subway.name}
+      {/* 이름 + 주소 */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 'var(--fs-base)', fontWeight: 700,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {item.name}
         </div>
-        <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, marginTop: 2 }}>
-          {subway.dest}
-        </div>
+        {item.distanceM != null && (
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 3 }}>
+            {fmtDist(item.distanceM)} 거리
+          </div>
+        )}
       </div>
 
-      {/* 도착 시간 */}
+      {/* ETA */}
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <div style={{
           fontSize: 'var(--fs-xl)', fontWeight: 900,
-          color: urgent ? 'var(--danger)' : 'var(--text)',
+          color: urgent ? 'var(--danger)' : 'var(--primary)',
         }}>
-          {urgent ? '곧 도착' : `${remaining}분`}
+          {urgent ? '곧 도착' : `${eta}분`}
         </div>
-        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>후 도착</div>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>
+          {isSubway ? '도보' : '후 도착'}
+        </div>
       </div>
     </button>
-  )
-}
-
-function EmptyState({ msg }) {
-  return (
-    <p style={{ textAlign: 'center', color: 'var(--text-soft)', fontSize: 'var(--fs-base)', padding: 32 }}>
-      {msg}
-    </p>
   )
 }
