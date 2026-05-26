@@ -3,6 +3,7 @@ import MapCanvas from './MapCanvas.jsx'
 import BottomNav from './BottomNav.jsx'
 import SearchPanel from './SearchPanel.jsx'
 import FindFlow from './FindFlow.jsx'
+import ReserveFlow from './ReserveFlow.jsx'
 import PlaceSheet from './PlaceSheet.jsx'
 import ReservationModal from './ReservationModal.jsx'
 import Tutorial from './Tutorial.jsx'
@@ -26,6 +27,11 @@ export default function App() {
   const [directionsSeed, setDirectionsSeed] = useState(null)
   const [center, setCenter]             = useState(DEFAULT_CENTER)
   const [searchResult, setSearchResult] = useState(null) // { places, query }
+  const [flowResults, setFlowResults]   = useState([])   // 길찾기 검색 결과
+  const [flowLoading, setFlowLoading]   = useState(false)
+  const [reserveResults, setReserveResults] = useState([])  // 예약 검색 결과
+  const [reserveSelected, setReserveSelected] = useState(null) // 예약 선택된 장소
+  const [transitQuery, setTransitQuery] = useState('')
 
   // 튜토리얼 상태
   const [tutTab, setTutTab]   = useState(null)
@@ -70,6 +76,7 @@ export default function App() {
   function handleRoute(r) {
     setRoute(r)
     setMarkers(r ? [r.dest] : [])
+    setFlowResults([]) // 목적지 선택 후 결과 드롭다운 닫기
   }
 
   function closePanel() {
@@ -77,30 +84,72 @@ export default function App() {
     setRoute(null)
     setMarkers([])
     setSearchResult(null)
+    setFlowResults([])
+    setReserveResults([])
+    setReserveSelected(null)
+    setTransitQuery('')
   }
 
   function onTabChange(next) {
     setSelectedPlace(null)
-    if (tab === next) { closePanel(); return } // 같은 탭 다시 → 닫기
+    if (tab === next) { closePanel(); return }
     if (next !== 'directions') setDirectionsSeed(null)
+    // 탭 전환 시 이전 탭 flow 상태 초기화
+    setFlowResults([])
+    setReserveResults([])
+    setReserveSelected(null)
+    setTransitQuery('')
     setTab(next)
     maybeStartTutorial(next)
   }
 
-  // 최상단 검색창에서 장소 검색
+  // 최상단 검색창 — 활성 탭에 따라 라우팅
   async function onBannerSearch(query) {
     if (!query) return
+
+    if (tab === 'directions') {
+      setFlowLoading(true)
+      const places = await searchByKeyword(query, origin)
+      setFlowResults(places)
+      setFlowLoading(false)
+      if (tutSteps && tutStep === 0) nextTutorialStep()
+      return
+    }
+
+    if (tab === 'reserve') {
+      setFlowLoading(true)
+      const places = await searchByKeyword(query, origin)
+      setReserveResults(places)
+      setFlowLoading(false)
+      if (tutSteps && tutStep === 0) nextTutorialStep()
+      return
+    }
+
+    if (tab === 'transit') {
+      setTransitQuery(query)
+      if (tutSteps && tutStep === 0) nextTutorialStep()
+      return
+    }
+
+    // 기본: 지도 마커 검색
     const places = await searchByKeyword(query, origin)
     setMarkers(places)
     setSearchResult({ places, query })
-    // 패널이 없으면 검색 결과 패널 열기
     if (!tab) setTab('search-result')
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
-      {/* ① 최상단: 방향 배너 + 검색창 */}
-      <DirectionBanner onSearch={onBannerSearch} />
+      {/* ① 최상단: 방향 배너 + 검색창 (탭에 따라 placeholder 변경) */}
+      <DirectionBanner
+        onSearch={onBannerSearch}
+        placeholder={
+          tab === 'directions' ? '목적지를 검색하세요' :
+          tab === 'reserve'    ? '예약할 장소를 검색하세요' :
+          tab === 'transit'    ? '노선번호 또는 정류장 검색' :
+          '검색하기'
+        }
+      />
 
       {/* ② 중앙: 지도 영역 */}
       <main style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
@@ -135,22 +184,33 @@ export default function App() {
             key={directionsSeed?.id || 'directions'}
             from={origin}
             initialDest={directionsSeed}
+            results={flowResults}
+            loading={flowLoading}
             onRoute={handleRoute}
             onTutAdvance={nextTutorialStep}
           />
         )}
 
-        {/* 예약하기 패널 (전체 화면) */}
-        {tab === 'reserve' && (
-          <Panel title="예약하기" onClose={closePanel} full>
-            <ReservePanel onTutAdvance={nextTutorialStep} />
+        {/* 예약하기 — 검색 결과 오버레이 (길찾기와 동일한 UX) */}
+        {tab === 'reserve' && !reserveSelected && (
+          <ReserveFlow
+            results={reserveResults}
+            loading={flowLoading}
+            onSelectPlace={(p) => { setReserveSelected(p); setReserveResults([]) }}
+            onTutAdvance={nextTutorialStep}
+          />
+        )}
+        {/* 장소 선택 후: 예약 마법사 전체 화면 */}
+        {tab === 'reserve' && reserveSelected && (
+          <Panel title={reserveSelected.name} onClose={() => setReserveSelected(null)} full compactTitle>
+            <ReservePanel initialPlace={reserveSelected} onTutAdvance={nextTutorialStep} />
           </Panel>
         )}
 
         {/* 대중교통 패널 (전체 화면) */}
         {tab === 'transit' && (
           <Panel title="대중교통" onClose={closePanel} full>
-            <TransitPanel onTutAdvance={nextTutorialStep} />
+            <TransitPanel externalQuery={transitQuery} onTutAdvance={nextTutorialStep} />
           </Panel>
         )}
 

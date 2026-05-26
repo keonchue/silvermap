@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MicIcon, SearchIcon } from './icons.jsx'
 
 // 최상단 고정 배너: 빨간 방향 화살표(DeviceOrientation) + 검색창
-export default function DirectionBanner({ onSearch }) {
+export default function DirectionBanner({ onSearch, placeholder = '검색하기' }) {
   const [heading, setHeading] = useState(0)
   const [hasOrient, setHasOrient] = useState(false)
   const [query, setQuery] = useState('')
@@ -95,7 +95,7 @@ export default function DirectionBanner({ onSearch }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="검색하기"
+            placeholder={placeholder}
             enterKeyHint="search"
             className="dir-banner-input"
             aria-label="장소 검색"

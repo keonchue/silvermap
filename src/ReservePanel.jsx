@@ -39,11 +39,11 @@ const AVAILABLE_DATES = [
   '5월 30일 (금)', '6월 2일 (월)',  '6월 3일 (화)',
 ]
 
-export default function ReservePanel({ onTutAdvance }) {
-  const [step, setStep]           = useState(0) // 0:검색 1:장소 2:예약상세 3:결제 4:완료
+export default function ReservePanel({ onTutAdvance, initialPlace }) {
+  const [step, setStep]           = useState(initialPlace ? 1 : 0) // 0:검색 1:장소 2:예약상세 3:결제 4:완료
   const [query, setQuery]         = useState('')
   const [results, setResults]     = useState(PLACES_MOCK)
-  const [place, setPlace]         = useState(null)
+  const [place, setPlace]         = useState(initialPlace || null)
   const [program, setProgram]     = useState(null)
   const [date, setDate]           = useState(null)
   const [people, setPeople]       = useState(1)
