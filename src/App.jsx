@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import MapCanvas from './MapCanvas.jsx'
 import MapHomeOverlay from './MapHomeOverlay.jsx'
 import BottomNav from './BottomNav.jsx'
@@ -55,7 +55,7 @@ export default function App() {
     setTab(next)
   }
 
-  // 홈 탭에서 오버레이 높이(방향바+검색바) ≈ 170px
+  // 홈 탭에서 오버레이 높이(방향바+검색바) ≈ 170px + safe area
   const overlayOffset = tab === 'map' ? 170 : 20
 
   return (
@@ -149,9 +149,52 @@ export default function App() {
 }
 
 function Panel({ title, onClose, compactTitle, children }) {
+  const panelRef = useRef(null)
+  const touchState = useRef({ startY: null, active: false })
+
+  function onDragStart(e) {
+    touchState.current = { startY: e.touches[0].clientY, active: true }
+    if (panelRef.current) panelRef.current.style.transition = 'none'
+  }
+
+  function onDragMove(e) {
+    const { startY, active } = touchState.current
+    if (!active) return
+    const dy = e.touches[0].clientY - startY
+    if (dy > 0 && panelRef.current) {
+      panelRef.current.style.transform = `translateY(${dy}px)`
+    }
+  }
+
+  function onDragEnd(e) {
+    const { startY, active } = touchState.current
+    if (!active) return
+    const dy = e.changedTouches[0].clientY - startY
+    touchState.current.active = false
+    if (dy > 90) {
+      onClose()
+    } else if (panelRef.current) {
+      panelRef.current.style.transition = 'transform 220ms cubic-bezier(0.34,1.1,0.64,1)'
+      panelRef.current.style.transform = ''
+    }
+  }
+
   return (
-    <section className="panel" role="dialog" aria-label={title}>
-      <div className="panel-header">
+    <section ref={panelRef} className="panel" role="dialog" aria-label={title}>
+      <div
+        className="panel-handle"
+        onTouchStart={onDragStart}
+        onTouchMove={onDragMove}
+        onTouchEnd={onDragEnd}
+      >
+        <div className="panel-handle-bar" />
+      </div>
+      <div
+        className="panel-header"
+        onTouchStart={onDragStart}
+        onTouchMove={onDragMove}
+        onTouchEnd={onDragEnd}
+      >
         <h2 className="panel-title" style={compactTitle ? { fontSize: 'var(--fs-lg)', flex: 1 } : { flex: 1 }}>
           {title}
         </h2>

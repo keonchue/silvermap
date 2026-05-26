@@ -32,7 +32,12 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body, #root { height: 100%; }
+html {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body, #root { height: 100%; }
 
 body {
   font-family: 'Noto Sans KR', system-ui, sans-serif;
@@ -41,8 +46,11 @@ body {
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
-  /* 더블탭 확대 지연 제거 */
   touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  /* iOS 텍스트 자동 조절 방지 */
+  -webkit-text-size-adjust: 100%;
 }
 
 button {
@@ -101,7 +109,7 @@ input {
 
 .btn-ghost { background: transparent; color: var(--primary); font-weight: 700; }
 
-/* 패널: 지도 위로 올라오는 시트 */
+/* 패널: 지도 위로 올라오는 바텀 시트 */
 .panel {
   position: absolute;
   left: 0; right: 0; bottom: 0;
@@ -112,22 +120,48 @@ input {
   flex-direction: column;
   max-height: 82%;
   z-index: 20;
-  animation: slideUp 220ms ease-out;
+  will-change: transform;
+  animation: slideUp 260ms cubic-bezier(0.34, 1.1, 0.64, 1);
 }
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
 
+/* 드래그 핸들 영역 */
+.panel-handle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 20px 4px;
+  touch-action: none;
+  cursor: grab;
+  flex-shrink: 0;
+}
+.panel-handle:active { cursor: grabbing; }
+.panel-handle-bar {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border);
+}
+
 .panel-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 20px 14px;
+  padding: 10px 20px 14px;
   border-bottom: 2px solid var(--surface-2);
+  touch-action: none;
 }
 .panel-title { font-size: var(--fs-xl); font-weight: 900; }
-.panel-body { padding: 16px 20px; overflow-y: auto; }
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 하단 safe area 여백 */
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
 
 /* 닫기(X) 버튼 */
 .icon-btn {

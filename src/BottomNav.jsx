@@ -36,12 +36,36 @@ export default function BottomNav({ active, onChange }) {
               padding: '10px 4px 12px',
               minHeight: 76,
               color: on ? 'var(--primary)' : 'var(--text-soft)',
-              background: on ? 'var(--surface)' : 'transparent',
+              background: 'transparent',
               fontWeight: on ? 900 : 700,
+              position: 'relative',
             }}
           >
-            <Icon size={30} />
-            <span style={{ fontSize: 15 }}>{label}</span>
+            {/* 활성 탭 인디케이터 */}
+            {on && (
+              <span style={{
+                position: 'absolute',
+                top: 0,
+                left: '20%',
+                right: '20%',
+                height: 3,
+                borderRadius: '0 0 3px 3px',
+                background: 'var(--primary)',
+              }} />
+            )}
+            <span style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 48,
+              height: 36,
+              borderRadius: 12,
+              background: on ? 'var(--surface)' : 'transparent',
+              transition: 'background 150ms',
+            }}>
+              <Icon size={28} />
+            </span>
+            <span style={{ fontSize: 14, lineHeight: 1 }}>{label}</span>
           </button>
         )
       })}

@@ -88,7 +88,10 @@ export default function MapHomeOverlay({ from, onResults, onSelectPlace, onOpenD
           color: '#fff',
           display: 'flex',
           alignItems: 'center',
-          padding: '10px 14px',
+          paddingTop: 'max(10px, env(safe-area-inset-top))',
+          paddingBottom: 10,
+          paddingLeft: 14,
+          paddingRight: 14,
           gap: 10,
         }}>
           <span style={{ flex: 1, fontSize: 20, fontWeight: 900 }}>
