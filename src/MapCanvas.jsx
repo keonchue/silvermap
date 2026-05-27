@@ -104,7 +104,7 @@ function RealMap({ center, userLocation, markers, routePath, onMarkerClick, onLo
           <div style="position:relative;width:120px;height:120px">
             <div id="${USER_CONE_ID}" style="position:absolute;inset:0;transform:rotate(${h}deg);transform-origin:50% 50%;transition:transform 300ms ease-out">
               <svg viewBox="0 0 120 120" width="120" height="120">
-                <polygon points="60,6 90,74 30,74" fill="#1957c8" stroke="white" stroke-width="3.5" stroke-linejoin="round"/>
+                <polygon points="60,4 78,66 42,66" fill="#1957c8" stroke="white" stroke-width="3" stroke-linejoin="round"/>
               </svg>
             </div>
             <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;background:#1957c8;border:5px solid white;border-radius:50%;box-shadow:0 0 0 9px rgba(25,87,200,0.25)"></div>
