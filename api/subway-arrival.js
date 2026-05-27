@@ -5,6 +5,12 @@
 const SUBWAY_COLORS = {
   1001: '#0052a4', 1002: '#00a84d', 1003: '#ef7c1c', 1004: '#00a5de',
   1005: '#996cac', 1006: '#cd7c2f', 1007: '#747f00', 1008: '#e6186c', 1009: '#bdb092',
+  1077: '#e5007f',
+}
+const SUBWAY_NAMES = {
+  1001: '1호선', 1002: '2호선', 1003: '3호선', 1004: '4호선',
+  1005: '5호선', 1006: '6호선', 1007: '7호선', 1008: '8호선', 1009: '9호선',
+  1077: '신분당선', 1063: '경의중앙선', 1065: '공항철도', 1075: '수인분당선',
 }
 
 export default async function handler(req, res) {
@@ -59,7 +65,7 @@ export default async function handler(req, res) {
       if (eta === null) return acc
       acc.push({
         id:        `subway-${key}`,
-        name:      item.subwayNm ?? String(item.subwayId),
+        name:      item.subwayNm ?? SUBWAY_NAMES[Number(item.subwayId)] ?? String(item.subwayId),
         dest:      item.bstatnNm ?? '',
         direction: item.trainLineNm ?? '',
         startStop: item.statnNm ?? stationName,
