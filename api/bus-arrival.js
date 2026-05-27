@@ -1,5 +1,5 @@
-// Vercel 서버리스 함수 — 버스 도착정보
-// 공공데이터포털: 국토교통부_버스도착정보조회서비스 + 버스정류소정보조회서비스
+// Vercel 서버리스 함수 — 서울 버스 도착정보
+// data.go.kr: 서울특별시_버스도착정보조회 서비스 (ws.bus.go.kr)
 // 환경 변수: DATA_GO_KR_KEY
 
 export default async function handler(req, res) {
@@ -7,66 +7,64 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
-  const { stationName, cityCode = '11' } = req.query   // 11 = 서울
+  const { stationName } = req.query
   const RAW_KEY = process.env.DATA_GO_KR_KEY
-  const KEY = encodeURIComponent(RAW_KEY ?? '')         // base64 키 URL 인코딩 필수
+  const KEY = encodeURIComponent(RAW_KEY ?? '')
 
-  if (!RAW_KEY) {
-    console.error('[bus-arrival] DATA_GO_KR_KEY 미설정')
-    return res.status(500).json({ error: 'DATA_GO_KR_KEY 미설정', buses: [] })
-  }
+  if (!RAW_KEY) return res.status(500).json({ error: 'DATA_GO_KR_KEY 미설정', buses: [] })
   if (!stationName) return res.json({ buses: [] })
 
   try {
-    // 1단계: 정류장 ID 조회
+    // 1단계: 정류소명 → arsId (서울 정류소 고유번호)
     const stUrl =
-      `https://apis.data.go.kr/1613000/BusSttnInfoInqireService/getSttnNoList` +
-      `?serviceKey=${KEY}&_type=json&cityCode=${cityCode}` +
-      `&nodeNm=${encodeURIComponent(stationName)}&numOfRows=5`
-
-    console.log('[bus-arrival] 정류장 조회:', stUrl.replace(KEY, 'KEY_HIDDEN'))
+      `http://ws.bus.go.kr/api/rest/stationinfo/getStationByName` +
+      `?ServiceKey=${KEY}&stSrch=${encodeURIComponent(stationName)}&resultType=json`
 
     const stResp = await fetch(stUrl)
     const stText = await stResp.text()
-    console.log('[bus-arrival] 정류장 응답 상태:', stResp.status, stText.slice(0, 300))
+    console.log('[bus-arrival] 정류소 응답:', stResp.status, stText.slice(0, 400))
 
     let stData
     try { stData = JSON.parse(stText) } catch {
-      console.error('[bus-arrival] JSON 파싱 실패:', stText.slice(0, 200))
-      return res.json({ error: 'JSON 파싱 실패', buses: [] })
+      console.error('[bus-arrival] JSON 파싱 실패:', stText.slice(0, 300))
+      return res.json({ buses: [] })
     }
 
-    const stItems = stData.response?.body?.items?.item
+    const stItems = stData.msgBody?.itemList
     const stList  = stItems ? (Array.isArray(stItems) ? stItems : [stItems]) : []
-    const nodeId  = stList[0]?.nodeid
+    const arsId   = stList[0]?.arsId
 
-    console.log('[bus-arrival] 정류장 목록:', stList.length, '개 | nodeId:', nodeId)
+    console.log('[bus-arrival] 정류소', stList.length, '개, arsId:', arsId)
+    if (!arsId) return res.json({ buses: [] })
 
-    if (!nodeId) return res.json({ buses: [] })
-
-    // 2단계: 도착정보 조회
+    // 2단계: arsId → 실시간 도착정보
     const arrUrl =
-      `https://apis.data.go.kr/1613000/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList` +
-      `?serviceKey=${KEY}&_type=json&cityCode=${cityCode}&nodeId=${nodeId}&numOfRows=10`
+      `http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid` +
+      `?ServiceKey=${KEY}&arsId=${arsId}&resultType=json`
 
     const arrResp = await fetch(arrUrl)
     const arrData = await arrResp.json()
-    const arrItems = arrData.response?.body?.items?.item
+    const arrItems = arrData.msgBody?.itemList
     const arrList  = arrItems ? (Array.isArray(arrItems) ? arrItems : [arrItems]) : []
 
-    console.log('[bus-arrival] 도착정보:', arrList.length, '개')
+    console.log('[bus-arrival] 도착정보', arrList.length, '개')
 
-    const buses = arrList
-      .map((item) => ({
-        id:        `bus-${item.routeno}-${item.nodeid}`,
-        route:     item.routeno ?? '?',
-        dest:      item.nodenm ?? '',
-        startStop: item.routetp ?? '',
-        prevStops: item.arrprevstationcnt ?? null,
-        eta:       item.arrtime != null ? Math.max(1, Math.round(Number(item.arrtime) / 60)) : null,
+    const buses = arrList.flatMap((item) => {
+      const rows = []
+      if (item.traTime1 > 0) rows.push({
+        id: `bus-${item.rtNm}-1`, route: item.rtNm ?? '?',
+        dest: item.nxtStn ?? '', startStop: item.stNm ?? stationName,
+        eta: Math.max(1, Math.round(Number(item.traTime1) / 60)),
         routeColor: '#0052a4',
-      }))
-      .filter((b) => b.eta !== null)
+      })
+      if (item.traTime2 > 0) rows.push({
+        id: `bus-${item.rtNm}-2`, route: item.rtNm ?? '?',
+        dest: item.nxtStn ?? '', startStop: item.stNm ?? stationName,
+        eta: Math.max(1, Math.round(Number(item.traTime2) / 60)),
+        routeColor: '#0052a4',
+      })
+      return rows
+    })
 
     return res.json({ buses })
   } catch (err) {
