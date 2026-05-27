@@ -96,6 +96,7 @@ export default function DirectionsPanel({ from, hasMyLocation, initialDest, init
         </p>
         <form onSubmit={onSearch} style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
           <input
+            data-tutorial="dest-input"
             type="search" value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="가려는 곳을 적어주세요" aria-label="목적지 검색어"
             enterKeyHint="search"
@@ -110,8 +111,10 @@ export default function DirectionsPanel({ from, hasMyLocation, initialDest, init
           </button>
         </form>
         {loading && <p style={{ textAlign: 'center', fontSize: 'var(--fs-lg)' }}>찾는 중입니다...</p>}
-        {!loading && results.map((p) => (
-          <PlaceCard key={p.id} place={p} from={from} onSelect={chooseDest} actionLabel="목적지로 정하기" />
+        {!loading && results.map((p, i) => (
+          <div key={p.id} data-tutorial={i === 0 ? 'dest-result' : undefined}>
+            <PlaceCard place={p} from={from} onSelect={chooseDest} actionLabel="목적지로 정하기" />
+          </div>
         ))}
       </>
     )
@@ -143,7 +146,7 @@ export default function DirectionsPanel({ from, hasMyLocation, initialDest, init
       </button>
 
       {/* 이동 수단 탭 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+      <div data-tutorial="mode" style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
         {MODES.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -235,6 +238,7 @@ export default function DirectionsPanel({ from, hasMyLocation, initialDest, init
             ))}
           </ol>
           <button
+            data-tutorial="go"
             className="btn btn-primary"
             onClick={() => speak(`길 안내를 시작합니다. ${dest.name}까지 ${route.min}분 소요됩니다.`)}
             style={{ marginTop: 18, fontSize: 22, fontWeight: 900 }}
@@ -248,7 +252,7 @@ export default function DirectionsPanel({ from, hasMyLocation, initialDest, init
       )}
 
       {!route && (
-        <button className="btn btn-primary" onClick={() => {
+        <button data-tutorial="go" className="btn btn-primary" onClick={() => {
           const meters = distanceMeters(from, dest)
           const r = { meters, mode, ...estimate(meters, mode) }
           setRoute(r)

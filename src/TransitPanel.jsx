@@ -51,7 +51,9 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
 
   const list = mode === 'bus' ? buses : subways
   const timeStr = `${lastUpdated.getHours()}:${String(lastUpdated.getMinutes()).padStart(2, '0')}`
-  const usingRealApi = !!import.meta.env.VITE_KAKAO_REST_KEY
+  const usingPubApi   = !!import.meta.env.VITE_DATA_GO_KR_KEY && import.meta.env.VITE_DATA_GO_KR_KEY !== 'YOUR_DATA_GO_KR_KEY'
+  const usingKakaoApi = !!import.meta.env.VITE_KAKAO_REST_KEY
+  const usingRealApi  = usingPubApi || usingKakaoApi
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -129,9 +131,11 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
         color: usingRealApi ? '#166534' : '#7a3f00',
         lineHeight: 1.7,
       }}>
-        {usingRealApi
-          ? '카카오 모빌리티 실시간 데이터 기반 · 도착 시간은 추정값'
-          : '위치 정보는 카카오에서 제공합니다. 실시간 시간은 카카오 REST 키 설정 후 제공됩니다.'}
+        {usingPubApi
+          ? '공공데이터포털 실시간 정보 · 정류장 검색 시 도착 정보 표시'
+          : usingKakaoApi
+          ? '카카오 모빌리티 기반 · 도착 시간은 추정값'
+          : '실시간 정보 없음 · VITE_DATA_GO_KR_KEY 설정 시 실시간 도착정보 제공'}
       </div>
     </div>
   )

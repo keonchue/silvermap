@@ -1,7 +1,8 @@
-// 카카오 모빌리티 대중교통 경로 API로 실제 버스·지하철 노선을 가져온다.
-// REST 키가 없으면 Kakao Places 폴백(정류장 이름만, 시뮬레이션 시간).
+// 실시간 대중교통 데이터 로더.
+// 우선순위: 공공데이터포털(data.go.kr) → 카카오 모빌리티 → 카카오 Places 폴백.
 
 import { searchByKeyword, distanceMeters } from './placesService.js'
+import { loadRealtimeTransit } from './realtimeTransitService.js'
 
 const REST_KEY = import.meta.env.VITE_KAKAO_REST_KEY
 const TRANSIT_URL = 'https://apis-navi.kakaomobility.com/v1/transit/routes'
@@ -44,7 +45,15 @@ async function fetchTransitRoute(origin, dest) {
 export async function loadTransitOptions(userLocation, query = '') {
   if (!userLocation) return { buses: [], subways: [] }
 
-  // ── REST 키 있으면 실제 API ──────────────────────────────
+  // ── 1순위: 공공데이터포털 실시간 API ─────────────────────
+  try {
+    const realtime = await loadRealtimeTransit(userLocation, query)
+    if (realtime) return realtime
+  } catch (err) {
+    console.warn('[transit] 공공데이터포털 오류, 카카오로 폴백:', err)
+  }
+
+  // ── 2순위: 카카오 모빌리티 REST API ──────────────────────
   if (REST_KEY && REST_KEY !== 'YOUR_KAKAO_REST_KEY') {
     try {
       const results = await Promise.allSettled(
