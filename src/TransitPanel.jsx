@@ -25,12 +25,21 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [internalQuery, setInternalQuery] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
+  const [loadError, setLoadError] = useState(null)
 
   async function load(query = '') {
     setLoading(true)
-    const result = await loadTransitOptions(userLocation, query)
-    setBuses(result.buses)
-    setSubways(result.subways)
+    setLoadError(null)
+    try {
+      const result = await loadTransitOptions(userLocation, query)
+      setBuses(result.buses)
+      setSubways(result.subways)
+    } catch (err) {
+      console.error('[TransitPanel] 오류:', err)
+      setLoadError(String(err))
+      setBuses([])
+      setSubways([])
+    }
     setLoading(false)
     setLastUpdated(new Date())
   }
@@ -116,6 +125,13 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
           <RefreshIcon size={18} /> 새로고침
         </button>
       </div>
+
+      {/* 오류 표시 */}
+      {loadError && (
+        <div style={{ padding: '12px 16px', background: '#fff0f0', border: '1px solid #f00', borderRadius: 12, fontSize: 14, color: '#900' }}>
+          오류: {loadError}
+        </div>
+      )}
 
       {/* 목록 */}
       {loading ? (
