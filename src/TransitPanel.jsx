@@ -90,7 +90,7 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
         {[{ id: 'subway', label: '🚇 지하철' }, { id: 'bus', label: '🚌 버스' }].map(({ id, label }) => (
           <button
             key={id}
-            onClick={() => { setMode(id); setInternalQuery(''); setActiveQuery(''); setBuses([]); setSubways([]); setSearchedPlace(null) }}
+            onClick={() => { setMode(id); setInternalQuery(''); setActiveQuery(''); setBuses([]); setSubways([]); setSearchedPlace(null); if (onTutAdvance) onTutAdvance() }}
             style={{
               flex: 1, padding: '14px 0', borderRadius: 'var(--radius)',
               border: mode === id ? '3px solid var(--primary)' : '2px solid var(--border)',
@@ -103,7 +103,7 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
       </div>
 
       {/* 검색창 */}
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+      <form data-tutorial="transit-search" onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
         <input
           type="search"
           value={internalQuery}

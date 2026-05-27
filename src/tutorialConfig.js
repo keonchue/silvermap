@@ -46,23 +46,30 @@ export const TUTORIALS = {
   ],
   transit: [
     {
-      id: 'home-search',
-      target: '[data-tutorial="home-search"]',
-      message: '위 검색창에 노선번호 또는 정류장을 입력하세요.',
+      id: 'transit-toggle',
+      target: '[data-tutorial="transit-toggle"]',
+      message: '지하철 또는 버스 중 하나를 선택하세요.',
+      position: 'below',
+      clickAdvances: false,
+    },
+    {
+      id: 'transit-search',
+      target: '[data-tutorial="transit-search"]',
+      message: '버스 번호(예: 273) 또는 역 이름(예: 강남역)을 입력하고 검색 버튼을 누르세요.',
       position: 'below',
       clickAdvances: false,
     },
     {
       id: 'transit-card',
       target: '[data-tutorial="transit-card"]',
-      message: '카드를 눌러 도착 시간을 음성으로 들을 수 있어요.',
+      message: '카드를 눌러 도착 시간을 음성으로 들을 수 있어요. 길찾기 버튼으로 바로 이동할 수 있습니다.',
       position: 'below',
       clickAdvances: false,
     },
   ],
 }
 
-export const TUTORIAL_VERSION = 'v4'
+export const TUTORIAL_VERSION = 'v5'
 const SEEN_KEY = (tab) => `silvermap.tut.${TUTORIAL_VERSION}.${tab}`
 
 export function isTutorialSeen(tab) {

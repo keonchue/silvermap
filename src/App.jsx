@@ -142,16 +142,17 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
-      {/* ① 최상단: 방향 배너 + 검색창 (탭에 따라 placeholder 변경) */}
-      <DirectionBanner
-        onSearch={onBannerSearch}
-        placeholder={
-          tab === 'directions' ? '목적지를 검색하세요' :
-          tab === 'reserve'    ? '예약할 장소를 검색하세요' :
-          tab === 'transit'    ? '노선번호 또는 정류장 검색' :
-          '검색하기'
-        }
-      />
+      {/* ① 최상단: 검색창 (대중교통 탭에서는 숨김 — 탭 내 검색창 사용) */}
+      {tab !== 'transit' && (
+        <DirectionBanner
+          onSearch={onBannerSearch}
+          placeholder={
+            tab === 'directions' ? '목적지를 검색하세요' :
+            tab === 'reserve'    ? '예약할 장소를 검색하세요' :
+            '검색하기'
+          }
+        />
+      )}
 
       {/* ② 중앙: 지도 영역 */}
       <main style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
