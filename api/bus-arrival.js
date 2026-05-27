@@ -1,8 +1,8 @@
-// Vercel 서버리스 함수 — ODsay 버스 도착정보
+// Vercel 서버리스 함수 — ODsay 버스 도착 정보
+// 실시간 대신 배차 간격 기반 다음 버스 시각 추정
 // ?routeNo=273&lat=37.5&lng=127.0
-// 환경 변수: ODSAY_KEY
 
-const ODSAY = 'https://api.odsay.com/v1/api'
+const ODSAY_BASE = 'https://api.odsay.com/v1/api'
 const REFERER = 'https://keonchue.github.io/silvermap/'
 
 function haversine(lat1, lng1, lat2, lng2) {
@@ -13,9 +13,35 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-async function odsayFetch(KEY, path) {
-  const url = `${ODSAY}/${path}&apiKey=${encodeURIComponent(KEY)}`
+// 배차 간격 기반 다음 버스 추정 (한국 시간 KST)
+function estimateNextBus(lane) {
+  const now = new Date(Date.now() + 9 * 3600_000) // UTC → KST
+  const day = now.getUTCDay() // 0=일, 6=토
+  const intervalStr =
+    day === 0 ? lane.bus_Interval_Sun :
+    day === 6 ? lane.bus_Interval_Sat :
+    lane.bus_Interval_Week || lane.busInterval || '10'
+  const interval = parseInt(intervalStr, 10) || 10
+
+  const [fh, fm] = (lane.busFirstTime || '05:00').split(':').map(Number)
+  const [lh, lm] = (lane.busLastTime  || '23:00').split(':').map(Number)
+  const nowMin   = now.getUTCHours() * 60 + now.getUTCMinutes()
+  const firstMin = fh * 60 + fm
+  const lastMin  = lh * 60 + lm
+
+  if (nowMin < firstMin || nowMin > lastMin) return { eta: null, interval, outsideHours: true }
+
+  const elapsed     = nowMin - firstMin
+  const sinceLastDep = elapsed % interval
+  const nextIn       = interval - sinceLastDep
+
+  return { eta: Math.max(1, nextIn), interval }
+}
+
+async function odsayGet(KEY, endpoint) {
+  const url = `${ODSAY_BASE}/${endpoint}&apiKey=${encodeURIComponent(KEY)}`
   const resp = await fetch(url, { headers: { Referer: REFERER } })
+  if (!resp.ok) throw new Error(`ODsay HTTP ${resp.status}`)
   return resp.json()
 }
 
@@ -34,26 +60,23 @@ export default async function handler(req, res) {
   const userLng = lng ? parseFloat(lng) : null
 
   try {
-    // 1단계: 노선 번호로 busID 조회
-    const searchData = await odsayFetch(KEY, `searchBusLane?lang=0&CID=1000&busNo=${encodeURIComponent(routeNo)}`)
+    // 1단계: 노선 번호 검색
+    const searchData = await odsayGet(KEY, `searchBusLane?lang=0&CID=1000&busNo=${encodeURIComponent(routeNo)}`)
     const lanes = searchData.result?.lane
-    if (!lanes?.length) {
-      console.log('[bus-arrival] 노선 없음:', routeNo)
-      return res.json({ buses: [] })
-    }
-    const lane = lanes.find((l) => l.busNo === routeNo) || lanes[0]
-    const busID = lane.busID
-    console.log('[bus-arrival] 노선:', lane.busNo, 'busID:', busID)
+    if (!lanes?.length) return res.json({ buses: [] })
 
-    // 2단계: 노선 정류장 목록 (busID 파라미터 사용)
-    const detailData = await odsayFetch(KEY, `busLaneDetail?lang=0&CID=1000&busID=${busID}`)
-    const stations = detailData.result?.station ?? []
-    console.log('[bus-arrival] 정류장 수:', stations.length)
+    const lane  = lanes.find((l) => l.busNo === routeNo) || lanes[0]
+    const busID = lane.busID
+    console.log('[bus-arrival] 노선:', lane.busNo, 'busID:', busID, '배차:', lane.busInterval, '분')
+
+    // 2단계: 노선 정류장 목록 (busID 파라미터)
+    const detailData = await odsayGet(KEY, `busLaneDetail?lang=0&CID=1000&busID=${busID}`)
+    const stations   = detailData.result?.station ?? []
     if (!stations.length) return res.json({ buses: [] })
 
-    // 3단계: 가장 가까운 정류장 찾기
-    let nearestStation = stations[0]
-    let nearestDist = Infinity
+    // 3단계: 가장 가까운 정류장
+    let nearestStation = stations[Math.floor(stations.length / 4)] // 출발지 근처 회피용 기본값
+    let nearestDist    = Infinity
     if (userLat != null && userLng != null) {
       for (const st of stations) {
         const d = haversine(userLat, userLng, parseFloat(st.y), parseFloat(st.x))
@@ -62,38 +85,37 @@ export default async function handler(req, res) {
     }
     console.log('[bus-arrival] 가장 가까운 정류장:', nearestStation.stationName, Math.round(nearestDist), 'm')
 
-    // 4단계: 해당 정류장 실시간 도착정보
-    const realtimeData = await odsayFetch(KEY, `realtimeInfo?lang=0&stationID=${nearestStation.stationID}&stationMode=2`)
-    const realItems = realtimeData.result?.real ?? []
-    console.log('[bus-arrival] 실시간 도착:', realItems.length, '개')
-
-    // 이 노선 버스만 필터
-    const filtered = realItems.filter((r) => String(r.busLaneID) === String(busID) || r.busNo === routeNo)
+    // 4단계: 배차 간격 기반 ETA 추정
+    const { eta, interval, outsideHours } = estimateNextBus(lane)
     const distanceM = isFinite(nearestDist) ? Math.round(nearestDist) : null
 
-    const buses = filtered.slice(0, 2).map((item, i) => ({
-      id: `bus-${busID}-${i}`,
-      route: lane.busNo,
-      dest: lane.busEndPoint ?? '',
-      startStop: nearestStation.stationName,
-      distanceM,
-      eta: Math.max(1, Math.round(Number(item.estimateTime ?? item.predictTime1 ?? 0))),
-      routeColor: '#0052a4',
-    }))
-
-    // 해당 노선 버스가 없으면 이 정류장 전체 버스 중 첫 번째
-    if (!buses.length && realItems.length) {
-      const item = realItems[0]
-      buses.push({
-        id: `bus-${busID}-0`,
-        route: lane.busNo,
-        dest: lane.busEndPoint ?? '',
-        startStop: nearestStation.stationName,
-        distanceM,
-        eta: Math.max(1, Math.round(Number(item.estimateTime ?? item.predictTime1 ?? 5))),
-        routeColor: '#0052a4',
+    if (outsideHours || eta === null) {
+      return res.json({
+        buses: [{
+          id:        `bus-${busID}-noop`,
+          route:     lane.busNo,
+          dest:      lane.busEndPoint ?? '',
+          startStop: nearestStation.stationName,
+          distanceM,
+          eta:       null,
+          noService: true,
+          interval,
+          routeColor: '#888',
+        }],
       })
     }
+
+    // 도착 예정 2회 (지금, 1 배차 후)
+    const buses = [
+      {
+        id: `bus-${busID}-0`, route: lane.busNo, dest: lane.busEndPoint ?? '',
+        startStop: nearestStation.stationName, distanceM, eta, interval, routeColor: '#0052a4',
+      },
+      {
+        id: `bus-${busID}-1`, route: lane.busNo, dest: lane.busEndPoint ?? '',
+        startStop: nearestStation.stationName, distanceM, eta: eta + interval, interval, routeColor: '#0052a4',
+      },
+    ]
 
     return res.json({ buses })
   } catch (err) {

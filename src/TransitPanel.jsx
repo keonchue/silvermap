@@ -231,8 +231,37 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
 }
 
 function BusCard({ bus, tick, first, onSelect, onWalkToStop }) {
-  const eta = Math.max(1, bus.eta - Math.floor(tick / 2))
-  const urgent = eta <= 3
+  const eta = bus.eta != null ? Math.max(1, bus.eta - Math.floor(tick / 2)) : null
+  const urgent = eta != null && eta <= 3
+
+  if (bus.noService) {
+    return (
+      <div
+        data-tutorial={first ? 'transit-card' : undefined}
+        style={{
+          background: '#fff', border: '2px solid var(--border)',
+          borderRadius: 'var(--radius)', padding: '16px 18px',
+          display: 'flex', flexDirection: 'column', gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div style={{ background: '#888', color: '#fff', borderRadius: 10, padding: '6px 12px', fontWeight: 900, fontSize: 20, flexShrink: 0, minWidth: 64, textAlign: 'center' }}>
+            {bus.route}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700 }}>{bus.dest}</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 3 }}>
+              정류장: {bus.startStop}{bus.distanceM ? ` · ${fmtDist(bus.distanceM)}` : ''}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0, color: 'var(--text-soft)', fontSize: 'var(--fs-sm)' }}>운행 종료</div>
+        </div>
+        <button onClick={onWalkToStop} style={{ padding: '12px 0', borderRadius: 'var(--radius)', background: '#f0f7ff', border: '2px solid var(--primary)', color: 'var(--primary)', fontSize: 'var(--fs-base)', fontWeight: 700 }}>
+          🚶 이 정류장으로 걸어가기
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -255,17 +284,16 @@ function BusCard({ bus, tick, first, onSelect, onWalkToStop }) {
           <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {bus.dest}
           </div>
-          {bus.startStop && (
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 3 }}>
-              정류장: {bus.startStop}{bus.distanceM ? ` · ${fmtDist(bus.distanceM)}` : ''}
-            </div>
-          )}
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 3 }}>
+            정류장: {bus.startStop}{bus.distanceM ? ` · ${fmtDist(bus.distanceM)}` : ''}
+            {bus.interval ? ` · ${bus.interval}분 간격` : ''}
+          </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 900, color: urgent ? 'var(--danger)' : 'var(--text)' }}>
-            {urgent ? '곧 도착' : `${eta}분`}
+            {urgent ? '곧 도착' : `약 ${eta}분`}
           </div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>후 도착</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>후 예정</div>
         </div>
       </button>
       <button
