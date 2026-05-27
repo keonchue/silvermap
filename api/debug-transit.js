@@ -26,14 +26,15 @@ export default async function handler(req, res) {
     }
   }
 
-  // 버스 정류장 검색 테스트 — ws.bus.go.kr (실제 bus-arrival.js와 동일한 URL)
-  if (BUS_KEY) {
+  // 버스 정류장 검색 — SEOUL_API_KEY 우선 시도
+  const BUS_TRY_KEY = SUBWAY_KEY || BUS_KEY
+  if (BUS_TRY_KEY) {
     try {
-      const KEY = encodeURIComponent(BUS_KEY)
+      const KEY = encodeURIComponent(BUS_TRY_KEY)
       const url = `http://ws.bus.go.kr/api/rest/stationinfo/getStationByName?ServiceKey=${KEY}&stSrch=${encodeURIComponent('강남역')}&resultType=json`
       const resp = await fetch(url)
       const text = await resp.text()
-      result.bus_station = { status: resp.status, body: text.slice(0, 600) }
+      result.bus_station = { key_used: BUS_TRY_KEY === SUBWAY_KEY ? 'SEOUL_API_KEY' : 'DATA_GO_KR_KEY', status: resp.status, body: text.slice(0, 600) }
     } catch (e) {
       result.bus_station = { error: String(e) }
     }

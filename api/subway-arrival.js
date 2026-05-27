@@ -41,7 +41,8 @@ export default async function handler(req, res) {
       return res.json({ error: 'JSON 파싱 실패', subways: [] })
     }
 
-    if (data.errorMessage) {
+    // Seoul API는 성공 시에도 errorMessage 필드를 반환함 (code: 'INFO-000')
+    if (data.errorMessage && data.errorMessage.code !== 'INFO-000') {
       console.warn('[subway-arrival] API 오류:', data.errorMessage)
       return res.json({ subways: [], apiError: data.errorMessage })
     }
