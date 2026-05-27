@@ -333,26 +333,52 @@ function Panel({ title, onClose, compactTitle, children, full, hideHeader }) {
   )
 }
 
-/* ===== SnapSheet: 드래그로 높이 조절 가능한 바텀 시트 ===== */
+/* ===== SnapSheet: 마우스·터치 드래그로 높이 조절, 놓으면 가장 가까운 스냅 ===== */
 function SnapSheet({ children }) {
-  // 0 = 낮음(30%), 1 = 중간(58%), 2 = 높음(88%)
-  const SNAPS = [30, 58, 88]
+  const SNAPS = [28, 58, 88] // 컨테이너 높이 대비 %
   const [snap, setSnap] = useState(1)
-  const sheetRef   = useRef(null)
-  const touchStart = useRef(null)
+  const sheetRef = useRef(null)
+  const drag     = useRef({ active: false, startY: 0, startH: 0, snapIdx: 1 })
 
-  function onTouchStart(e) {
-    touchStart.current = e.touches[0].clientY
+  // drag.current.snapIdx 최신값 유지
+  useEffect(() => { drag.current.snapIdx = snap }, [snap])
+
+  function containerH() {
+    return sheetRef.current?.parentElement?.clientHeight ?? window.innerHeight
+  }
+  function snapH(i) { return (SNAPS[i] / 100) * containerH() }
+
+  function dragStart(clientY) {
+    drag.current = { active: true, startY: clientY, startH: snapH(drag.current.snapIdx), snapIdx: drag.current.snapIdx }
     if (sheetRef.current) sheetRef.current.style.transition = 'none'
   }
-  function onTouchEnd(e) {
-    if (!touchStart.current) return
-    const dy = e.changedTouches[0].clientY - touchStart.current
-    if (sheetRef.current) sheetRef.current.style.transition = 'height 320ms cubic-bezier(0.34,1.1,0.64,1)'
-    if      (dy >  70 && snap > 0)            setSnap(snap - 1)
-    else if (dy < -70 && snap < SNAPS.length - 1) setSnap(snap + 1)
-    touchStart.current = null
+  function dragMove(clientY) {
+    if (!drag.current.active || !sheetRef.current) return
+    const dy  = drag.current.startY - clientY // 위로 끌면 양수
+    const min = snapH(0), max = snapH(SNAPS.length - 1)
+    const h   = Math.min(Math.max(drag.current.startH + dy, min), max)
+    sheetRef.current.style.height = `${h}px`
   }
+  function dragEnd(clientY) {
+    if (!drag.current.active) return
+    drag.current.active = false
+    const dy   = drag.current.startY - clientY
+    const curH = drag.current.startH + dy
+    const pct  = (curH / containerH()) * 100
+    let nearest = 0, minDist = Infinity
+    SNAPS.forEach((s, i) => { const d = Math.abs(s - pct); if (d < minDist) { minDist = d; nearest = i } })
+    if (sheetRef.current) sheetRef.current.style.transition = 'height 300ms cubic-bezier(0.34,1.1,0.64,1)'
+    setSnap(nearest)
+  }
+
+  // 마우스 이벤트는 window에 붙여야 handle 밖으로 나가도 추적됨
+  useEffect(() => {
+    const mm = (e) => dragMove(e.clientY)
+    const mu = (e) => dragEnd(e.clientY)
+    window.addEventListener('mousemove', mm)
+    window.addEventListener('mouseup',   mu)
+    return () => { window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -364,43 +390,26 @@ function SnapSheet({ children }) {
         borderRadius: '24px 24px 0 0',
         boxShadow: '0 -4px 24px rgba(21,35,59,0.18)',
         display: 'flex', flexDirection: 'column',
-        transition: 'height 320ms cubic-bezier(0.34,1.1,0.64,1)',
+        transition: 'height 300ms cubic-bezier(0.34,1.1,0.64,1)',
         zIndex: 20,
       }}
     >
-      {/* 드래그 핸들 */}
+      {/* 드래그 핸들 — 터치·마우스 모두 지원 */}
       <div
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
+        onMouseDown={(e) => dragStart(e.clientY)}
+        onTouchStart={(e) => dragStart(e.touches[0].clientY)}
+        onTouchMove={(e) => { e.preventDefault(); dragMove(e.touches[0].clientY) }}
+        onTouchEnd={(e) => dragEnd(e.changedTouches[0].clientY)}
         style={{
-          padding: '14px 0 8px', flexShrink: 0,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-          cursor: 'grab', touchAction: 'none',
+          padding: '14px 0 12px', flexShrink: 0,
+          display: 'flex', justifyContent: 'center',
+          cursor: 'ns-resize', touchAction: 'none', userSelect: 'none',
         }}
       >
-        <div style={{ width: 48, height: 5, borderRadius: 3, background: 'var(--border)' }} />
-        {/* 스냅 위치 표시 점 3개 */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          {SNAPS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setSnap(i)}
-              aria-label={['조금만 보기', '반반 보기', '크게 보기'][i]}
-              style={{
-                width: snap === i ? 20 : 8, height: 8, borderRadius: 4,
-                background: snap === i ? 'var(--primary)' : 'var(--border)',
-                transition: 'all 220ms ease',
-              }}
-            />
-          ))}
-        </div>
+        <div style={{ width: 52, height: 6, borderRadius: 3, background: 'var(--border)' }} />
       </div>
 
-      {/* 내용 */}
-      <div style={{
-        flex: 1, overflowY: 'auto', padding: '4px 20px 16px',
-        WebkitOverflowScrolling: 'touch',
-      }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 16px', WebkitOverflowScrolling: 'touch' }}>
         {children}
       </div>
     </div>
