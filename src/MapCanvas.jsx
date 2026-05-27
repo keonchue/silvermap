@@ -101,13 +101,13 @@ function RealMap({ center, userLocation, markers, routePath, onMarkerClick, onLo
         xAnchor: 0.5,
         yAnchor: 0.5,
         content: `
-          <div style="position:relative;width:52px;height:52px">
+          <div style="position:relative;width:80px;height:80px">
             <div id="${USER_CONE_ID}" style="position:absolute;inset:0;transform:rotate(${h}deg);transform-origin:center;transition:transform 300ms ease-out">
-              <svg viewBox="0 0 52 52" width="52" height="52">
-                <path d="M26,26 L19,6 L26,17 L33,6 Z" fill="rgba(25,87,200,0.82)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+              <svg viewBox="0 0 80 80" width="80" height="80">
+                <path d="M40,40 L24,6 L40,24 L56,6 Z" fill="rgba(25,87,200,0.88)" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
               </svg>
             </div>
-            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:22px;background:#1957c8;border:3px solid white;border-radius:50%;box-shadow:0 0 0 5px rgba(25,87,200,0.28)"></div>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:#1957c8;border:4px solid white;border-radius:50%;box-shadow:0 0 0 6px rgba(25,87,200,0.3)"></div>
           </div>
         `,
         zIndex: 5,
