@@ -165,15 +165,15 @@ export default function App() {
         />
 
 
-        {/* 홈 탭 — 장소 검색 + 카테고리 + 결과에서 바로 길찾기/예약/전화 */}
+        {/* 홈 탭 — 드래그 가능한 바텀 시트 (지도 위에 걸쳐 있음) */}
         {tab === 'home' && (
-          <Panel title="장소 찾기" onClose={() => {}} full hideHeader>
+          <SnapSheet>
             <SearchPanel
               from={origin}
               onResults={setMarkers}
               onSelectPlace={setSelectedPlace}
             />
-          </Panel>
+          </SnapSheet>
         )}
 
         {/* 검색 결과 패널 (배너 검색용) */}
@@ -330,6 +330,80 @@ function Panel({ title, onClose, compactTitle, children, full, hideHeader }) {
       )}
       <div className="panel-body">{children}</div>
     </section>
+  )
+}
+
+/* ===== SnapSheet: 드래그로 높이 조절 가능한 바텀 시트 ===== */
+function SnapSheet({ children }) {
+  // 0 = 낮음(30%), 1 = 중간(58%), 2 = 높음(88%)
+  const SNAPS = [30, 58, 88]
+  const [snap, setSnap] = useState(1)
+  const sheetRef   = useRef(null)
+  const touchStart = useRef(null)
+
+  function onTouchStart(e) {
+    touchStart.current = e.touches[0].clientY
+    if (sheetRef.current) sheetRef.current.style.transition = 'none'
+  }
+  function onTouchEnd(e) {
+    if (!touchStart.current) return
+    const dy = e.changedTouches[0].clientY - touchStart.current
+    if (sheetRef.current) sheetRef.current.style.transition = 'height 320ms cubic-bezier(0.34,1.1,0.64,1)'
+    if      (dy >  70 && snap > 0)            setSnap(snap - 1)
+    else if (dy < -70 && snap < SNAPS.length - 1) setSnap(snap + 1)
+    touchStart.current = null
+  }
+
+  return (
+    <div
+      ref={sheetRef}
+      style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        height: `${SNAPS[snap]}%`,
+        background: '#fff',
+        borderRadius: '24px 24px 0 0',
+        boxShadow: '0 -4px 24px rgba(21,35,59,0.18)',
+        display: 'flex', flexDirection: 'column',
+        transition: 'height 320ms cubic-bezier(0.34,1.1,0.64,1)',
+        zIndex: 20,
+      }}
+    >
+      {/* 드래그 핸들 */}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{
+          padding: '14px 0 8px', flexShrink: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          cursor: 'grab', touchAction: 'none',
+        }}
+      >
+        <div style={{ width: 48, height: 5, borderRadius: 3, background: 'var(--border)' }} />
+        {/* 스냅 위치 표시 점 3개 */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {SNAPS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setSnap(i)}
+              aria-label={['조금만 보기', '반반 보기', '크게 보기'][i]}
+              style={{
+                width: snap === i ? 20 : 8, height: 8, borderRadius: 4,
+                background: snap === i ? 'var(--primary)' : 'var(--border)',
+                transition: 'all 220ms ease',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* 내용 */}
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '4px 20px 16px',
+        WebkitOverflowScrolling: 'touch',
+      }}>
+        {children}
+      </div>
+    </div>
   )
 }
 
