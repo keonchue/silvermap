@@ -30,16 +30,21 @@ export default async function handler(req, res) {
   // Step 2: 노선 정류장 목록
   if (busLaneId) {
     try {
-      const url = `https://api.odsay.com/v1/api/busLaneDetail?apiKey=${encodeURIComponent(KEY)}&lang=0&CID=1000&busLaneID=${busLaneId}`
-      const resp = await fetch(url, { headers: { Referer: 'https://keonchue.github.io/silvermap/' } })
-      const text = await resp.text()
-      const data = JSON.parse(text)
-      const stations = data.result?.station ?? []
-      result.steps.busLaneDetail = {
-        status: resp.status,
-        raw: text.slice(0, 600),
-        stationCount: stations.length,
-        firstStation: stations[0],
+      const hdrs = { headers: { Referer: 'https://keonchue.github.io/silvermap/' } }
+      const base = `https://api.odsay.com/v1/api/busLaneDetail?apiKey=${encodeURIComponent(KEY)}&lang=0&CID=1000`
+
+      // 파라미터명 변형 테스트
+      for (const paramName of ['busLaneID', 'busLaneId', 'busLaneid', 'busID']) {
+        const testUrl = `${base}&${paramName}=${busLaneId}`
+        result.steps[`busLaneDetail_${paramName}`] = { url: testUrl.replace(encodeURIComponent(KEY), 'KEY') }
+        try {
+          const r = await fetch(testUrl, hdrs)
+          const d = await r.json()
+          result.steps[`busLaneDetail_${paramName}`].raw = JSON.stringify(d).slice(0, 300)
+          result.steps[`busLaneDetail_${paramName}`].stationCount = (d.result?.station ?? []).length
+        } catch (e) {
+          result.steps[`busLaneDetail_${paramName}`].error = String(e)
+        }
       }
 
       // Step 3: 첫 번째 정류장 실시간 도착정보
