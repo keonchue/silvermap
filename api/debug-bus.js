@@ -33,13 +33,21 @@ export default async function handler(req, res) {
     } catch (e) { result.steps.step2 = { error: String(e) } }
   }
 
-  // Step 3
-  if (stationID) {
+  // Step 3: 중간 정류장으로 여러 엔드포인트 시도
+  const stations = result.steps.step2?.stationCount > 0 ? null : null
+  const midStationID = 112355  // 첫 번째 정류장 (테스트용)
+  const midArsID = '07418'
+
+  for (const [label, url] of [
+    ['realtimeInfo_stationID', `https://api.odsay.com/v1/api/realtimeInfo?apiKey=${encodeURIComponent(KEY)}&lang=0&stationID=${midStationID}&stationMode=2`],
+    ['realtimeLane_busID', `https://api.odsay.com/v1/api/realtimeLane?apiKey=${encodeURIComponent(KEY)}&lang=0&CID=1000&busID=${busID}`],
+    ['realtimeLane_busLaneID', `https://api.odsay.com/v1/api/realtimeLane?apiKey=${encodeURIComponent(KEY)}&lang=0&CID=1000&busLaneID=${busID}`],
+    ['realtimeInfoNoMode', `https://api.odsay.com/v1/api/realtimeInfo?apiKey=${encodeURIComponent(KEY)}&lang=0&stationID=${midStationID}`],
+  ]) {
     try {
-      const url = `https://api.odsay.com/v1/api/realtimeInfo?apiKey=${encodeURIComponent(KEY)}&lang=0&stationID=${stationID}&stationMode=2`
       const data = await fetch(url, hdrs).then(r => r.json())
-      result.steps.step3 = { stationID, raw: JSON.stringify(data).slice(0, 600) }
-    } catch (e) { result.steps.step3 = { error: String(e) } }
+      result.steps[label] = JSON.stringify(data).slice(0, 400)
+    } catch (e) { result.steps[label] = String(e) }
   }
 
   return res.json(result)
