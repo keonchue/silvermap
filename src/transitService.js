@@ -43,15 +43,16 @@ async function fetchTransitRoute(origin, dest) {
 }
 
 export async function loadTransitOptions(userLocation, query = '') {
-  if (!userLocation) return { buses: [], subways: [] }
-
-  // ── 1순위: 공공데이터포털 실시간 API ─────────────────────
+  // 1순위: 공공데이터포털 실시간 API (위치 없이도 역명/정류장명으로 조회 가능)
   try {
     const realtime = await loadRealtimeTransit(userLocation, query)
     if (realtime) return realtime
   } catch (err) {
     console.warn('[transit] 공공데이터포털 오류, 카카오로 폴백:', err)
   }
+
+  // 이하 카카오 폴백은 위치 정보 필요
+  if (!userLocation) return { buses: [], subways: [] }
 
   // ── 2순위: 카카오 모빌리티 REST API ──────────────────────
   if (REST_KEY && REST_KEY !== 'YOUR_KAKAO_REST_KEY') {

@@ -23,6 +23,8 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
   const [tick, setTick]         = useState(0)
   const [selectedId, setSelectedId] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(new Date())
+  const [internalQuery, setInternalQuery] = useState('')
+  const [activeQuery, setActiveQuery] = useState('')
 
   async function load(query = '') {
     setLoading(true)
@@ -33,13 +35,19 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
     setLastUpdated(new Date())
   }
 
-  // 첫 로드
-  useEffect(() => { load() }, [userLocation]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 외부 검색어
+  // 외부 검색어 (상단 배너)
   useEffect(() => {
-    if (externalQuery) load(externalQuery)
+    if (externalQuery) { setInternalQuery(externalQuery); setActiveQuery(externalQuery); load(externalQuery) }
   }, [externalQuery]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleSearch(e) {
+    e.preventDefault()
+    const q = internalQuery.trim()
+    if (!q) return
+    setActiveQuery(q)
+    load(q)
+    if (onTutAdvance) onTutAdvance()
+  }
 
   // 30초 자동 갱신
   useEffect(() => {
@@ -47,16 +55,39 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
     return () => clearInterval(id)
   }, [])
 
-  function refresh() { load(externalQuery); setTick((t) => t + 1) }
+  function refresh() { load(activeQuery); setTick((t) => t + 1) }
 
   const list = mode === 'bus' ? buses : subways
   const timeStr = `${lastUpdated.getHours()}:${String(lastUpdated.getMinutes()).padStart(2, '0')}`
-  const usingPubApi   = !!import.meta.env.VITE_DATA_GO_KR_KEY && import.meta.env.VITE_DATA_GO_KR_KEY !== 'YOUR_DATA_GO_KR_KEY'
-  const usingKakaoApi = !!import.meta.env.VITE_KAKAO_REST_KEY
-  const usingRealApi  = usingPubApi || usingKakaoApi
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* 정류장/역명 검색 */}
+      <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+        <input
+          type="search"
+          value={internalQuery}
+          onChange={(e) => setInternalQuery(e.target.value)}
+          placeholder="정류장 또는 역 이름 입력 (예: 강남역)"
+          enterKeyHint="search"
+          style={{
+            flex: 1, padding: '14px 16px', fontSize: 'var(--fs-base)',
+            border: '2px solid var(--border)', borderRadius: 'var(--radius)',
+            outline: 'none',
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            padding: '14px 18px', background: 'var(--primary)', color: '#fff',
+            border: 'none', borderRadius: 'var(--radius)',
+            fontSize: 'var(--fs-base)', fontWeight: 700, flexShrink: 0,
+          }}
+        >
+          검색
+        </button>
+      </form>
+
       {/* 버스 / 지하철 토글 */}
       <div data-tutorial="transit-toggle" style={{ display: 'flex', gap: 8 }}>
         {[{ id: 'bus', label: '🚌 버스' }, { id: 'subway', label: '🚇 지하철' }].map(({ id, label }) => (
@@ -92,8 +123,10 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
           {mode === 'bus' ? '주변 버스 노선 확인 중...' : '지하철 노선 확인 중...'}
         </div>
       ) : list.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 32, fontSize: 'var(--fs-base)', color: 'var(--text-soft)' }}>
-          {externalQuery ? `'${externalQuery}' 검색 결과가 없습니다.` : '주변 노선 정보를 찾을 수 없습니다.'}
+        <div style={{ textAlign: 'center', padding: 32, fontSize: 'var(--fs-base)', color: 'var(--text-soft)', lineHeight: 1.8 }}>
+          {activeQuery
+            ? `'${activeQuery}' 결과가 없습니다.\n다른 정류장 이름으로 검색해 보세요.`
+            : '위 검색창에 정류장이나 역 이름을 입력해 주세요.\n예: 강남역, 홍대입구역'}
         </div>
       ) : mode === 'bus' ? (
         buses.map((b, i) => (
@@ -123,20 +156,11 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
         ))
       )}
 
-      <div style={{
-        marginTop: 4, padding: '12px 16px',
-        background: usingRealApi ? '#f0fdf4' : '#fff8e1',
-        border: `1px solid ${usingRealApi ? '#22c55e' : '#b25e00'}`,
-        borderRadius: 12, fontSize: 15,
-        color: usingRealApi ? '#166534' : '#7a3f00',
-        lineHeight: 1.7,
-      }}>
-        {usingPubApi
-          ? '공공데이터포털 실시간 정보 · 정류장 검색 시 도착 정보 표시'
-          : usingKakaoApi
-          ? '카카오 모빌리티 기반 · 도착 시간은 추정값'
-          : '실시간 정보 없음 · VITE_DATA_GO_KR_KEY 설정 시 실시간 도착정보 제공'}
-      </div>
+      {list.length > 0 && (
+        <div style={{ marginTop: 4, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #22c55e', borderRadius: 12, fontSize: 14, color: '#166534' }}>
+          서울 실시간 도착 정보 · {timeStr} 기준
+        </div>
+      )}
     </div>
   )
 }
