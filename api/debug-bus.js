@@ -32,13 +32,24 @@ export default async function handler(req, res) {
     try {
       const url = `https://api.odsay.com/v1/api/busLaneDetail?apiKey=${encodeURIComponent(KEY)}&lang=0&CID=1000&busLaneId=${busLaneId}`
       const resp = await fetch(url, { headers: { Referer: 'https://keonchue.github.io/silvermap/' } })
-      const data = await resp.json()
+      const text = await resp.text()
+      const data = JSON.parse(text)
       const stations = data.result?.station ?? []
       result.steps.busLaneDetail = {
         status: resp.status,
+        raw: text.slice(0, 600),
         stationCount: stations.length,
         firstStation: stations[0],
-        lastStation: stations[stations.length - 1],
+      }
+
+      // localBusID로도 시도
+      const url2b = `https://api.odsay.com/v1/api/busLaneDetail?apiKey=${encodeURIComponent(KEY)}&lang=0&busLaneId=${busLaneId}`
+      const resp2b = await fetch(url2b, { headers: { Referer: 'https://keonchue.github.io/silvermap/' } })
+      const data2b = await resp2b.json()
+      result.steps.busLaneDetail_noCID = {
+        status: resp2b.status,
+        stationCount: (data2b.result?.station ?? []).length,
+        raw: JSON.stringify(data2b).slice(0, 400),
       }
 
       // Step 3: 첫 번째 정류장 실시간 도착정보
