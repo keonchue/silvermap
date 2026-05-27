@@ -1,26 +1,50 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadKakaoSdk, isKakaoKeyConfigured } from './kakaoLoader.js'
 import { CATEGORIES } from './categories.js'
-import { PinIcon, PlusIcon, MinusIcon, LocationIcon, NorthIcon, LayersIcon } from './icons.jsx'
+import { PinIcon, PlusIcon, MinusIcon, LocationIcon } from './icons.jsx'
 
 const catColor = (id) =>
   CATEGORIES.find((c) => c.id === id)?.color || '#1957c8'
 
+const USER_CONE_ID = 'user-loc-cone'
+
 /* ===== 실제 카카오 지도 ===== */
 function RealMap({ center, userLocation, markers, routePath, onMarkerClick, onLocateRequest, overlayOffset }) {
-  const boxRef = useRef(null)
-  const mapRef = useRef(null)
-  const objsRef = useRef([])
+  const boxRef   = useRef(null)
+  const mapRef   = useRef(null)
+  const objsRef  = useRef([])
   const [failed, setFailed] = useState(false)
 
-  function zoomIn() { mapRef.current?.setLevel(mapRef.current.getLevel() - 1) }
+  // 방향(heading) — deviceorientation으로 실시간 갱신
+  const [heading, setHeading]   = useState(0)
+  const headingRef              = useRef(0)
+
+  useEffect(() => {
+    function onOrient(e) {
+      const h =
+        typeof e.webkitCompassHeading === 'number'
+          ? e.webkitCompassHeading          // iOS
+          : e.alpha != null ? 360 - e.alpha // Android
+          : null
+      if (h != null) { headingRef.current = Math.round(h); setHeading(Math.round(h)) }
+    }
+    window.addEventListener('deviceorientation', onOrient, true)
+    return () => window.removeEventListener('deviceorientation', onOrient, true)
+  }, [])
+
+  // heading 변경 시 오버레이 DOM 직접 업데이트 (오버레이 재생성 없음)
+  useEffect(() => {
+    const el = document.getElementById(USER_CONE_ID)
+    if (el) el.style.transform = `rotate(${heading}deg)`
+  }, [heading])
+
+  function zoomIn()  { mapRef.current?.setLevel(mapRef.current.getLevel() - 1) }
   function zoomOut() { mapRef.current?.setLevel(mapRef.current.getLevel() + 1) }
   function goToUser() {
     if (!userLocation) { onLocateRequest?.(); return }
     const kakao = window.kakao
-    if (mapRef.current && kakao) {
+    if (mapRef.current && kakao)
       mapRef.current.panTo(new kakao.maps.LatLng(userLocation.lat, userLocation.lng))
-    }
     onLocateRequest?.()
   }
 
@@ -64,19 +88,29 @@ function RealMap({ center, userLocation, markers, routePath, onMarkerClick, onLo
       const label = new kakao.maps.CustomOverlay({
         position: new kakao.maps.LatLng(m.lat, m.lng),
         yAnchor: 2.1,
-        content: `<div style="background:#fff;border:2px solid ${catColor(
-          m.category,
-        )};border-radius:10px;padding:4px 10px;font-size:15px;font-weight:700;color:#15233b;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.2)">${m.name}</div>`,
+        content: `<div style="background:#fff;border:2px solid ${catColor(m.category)};border-radius:10px;padding:4px 10px;font-size:15px;font-weight:700;color:#15233b;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.2)">${m.name}</div>`,
       })
       label.setMap(map)
       objsRef.current.push(marker, label)
     })
 
     if (userLocation) {
+      const h = headingRef.current
       const dot = new kakao.maps.CustomOverlay({
         position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
-        content:
-          '<div style="width:24px;height:24px;background:#1957c8;border:4px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(25,87,200,.35)"></div>',
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        content: `
+          <div style="position:relative;width:52px;height:52px">
+            <div id="${USER_CONE_ID}" style="position:absolute;inset:0;transform:rotate(${h}deg);transform-origin:center;transition:transform 300ms ease-out">
+              <svg viewBox="0 0 52 52" width="52" height="52">
+                <path d="M26,26 L19,6 L26,17 L33,6 Z" fill="rgba(25,87,200,0.82)" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:22px;background:#1957c8;border:3px solid white;border-radius:50%;box-shadow:0 0 0 5px rgba(25,87,200,0.28)"></div>
+          </div>
+        `,
+        zIndex: 5,
       })
       dot.setMap(map)
       objsRef.current.push(dot)
@@ -125,7 +159,6 @@ function DemoMap({ center, userLocation, markers, routePath, onMarkerClick, note
   let maxLat = Math.max(...pts.map((p) => p.lat))
   let minLng = Math.min(...pts.map((p) => p.lng))
   let maxLng = Math.max(...pts.map((p) => p.lng))
-  // 점이 하나뿐일 때를 대비한 최소 범위
   const padLat = Math.max((maxLat - minLat) * 0.25, 0.004)
   const padLng = Math.max((maxLng - minLng) * 0.25, 0.004)
   minLat -= padLat; maxLat += padLat; minLng -= padLng; maxLng += padLng
@@ -170,13 +203,18 @@ function DemoMap({ center, userLocation, markers, routePath, onMarkerClick, note
 
       {userLocation && (
         <Dot x={projX(userLocation.lng)} y={projY(userLocation.lat)}>
-          <div
-            style={{
-              width: 26, height: 26, background: '#1957c8',
-              border: '4px solid #fff', borderRadius: '50%',
-              boxShadow: '0 0 0 5px rgba(25,87,200,.3)',
-            }}
-          />
+          <div style={{ position: 'relative', width: 48, height: 48 }}>
+            <svg viewBox="0 0 48 48" width="48" height="48" style={{ position: 'absolute', inset: 0 }}>
+              <path d="M24,24 L17,5 L24,15 L31,5 Z" fill="rgba(25,87,200,0.8)" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+            </svg>
+            <div style={{
+              position: 'absolute', top: '50%', left: '50%',
+              transform: 'translate(-50%,-50%)',
+              width: 20, height: 20, background: '#1957c8',
+              border: '3px solid white', borderRadius: '50%',
+              boxShadow: '0 0 0 5px rgba(25,87,200,0.28)',
+            }} />
+          </div>
         </Dot>
       )}
 
@@ -231,8 +269,8 @@ function MapControls({ top, onZoomIn, onZoomOut, onLocation }) {
       display: 'flex', flexDirection: 'column', gap: 10, zIndex: 5,
     }}>
       {[
-        { label: '확대',   Icon: PlusIcon,     fn: onZoomIn },
-        { label: '축소',   Icon: MinusIcon,    fn: onZoomOut },
+        { label: '확대',    Icon: PlusIcon,     fn: onZoomIn },
+        { label: '축소',    Icon: MinusIcon,    fn: onZoomOut },
         { label: '내 위치', Icon: LocationIcon, fn: onLocation, tutAttr: 'my-location' },
       ].map(({ label, Icon, fn, tutAttr }) => (
         <button

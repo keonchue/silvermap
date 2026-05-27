@@ -1,36 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { MicIcon, SearchIcon } from './icons.jsx'
 
-// 최상단 고정 배너: 빨간 방향 화살표(DeviceOrientation) + 검색창
 export default function DirectionBanner({ onSearch, placeholder = '검색하기' }) {
-  const [heading, setHeading] = useState(0)
-  const [hasOrient, setHasOrient] = useState(false)
-  const [query, setQuery] = useState('')
+  const [heading, setHeading]   = useState(0)
+  const [query, setQuery]       = useState('')
   const [listening, setListening] = useState(false)
   const recRef = useRef(null)
 
   useEffect(() => {
     function onOrient(e) {
-      // iOS는 webkitCompassHeading, Android는 alpha
       const h =
         typeof e.webkitCompassHeading === 'number'
           ? e.webkitCompassHeading
-          : e.alpha != null
-          ? 360 - e.alpha
-          : null
-      if (h != null) { setHeading(h); setHasOrient(true) }
+          : e.alpha != null ? 360 - e.alpha : null
+      if (h != null) setHeading(Math.round(h))
     }
     window.addEventListener('deviceorientation', onOrient, true)
     return () => window.removeEventListener('deviceorientation', onOrient, true)
   }, [])
 
-  // iOS 13+ 권한 요청
   async function requestOrientPermission() {
     try {
-      if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
-        const r = await DeviceOrientationEvent.requestPermission()
-        if (r === 'granted') setHasOrient(true)
-      }
+      if (typeof DeviceOrientationEvent?.requestPermission === 'function')
+        await DeviceOrientationEvent.requestPermission()
     } catch {}
   }
 
@@ -47,49 +39,50 @@ export default function DirectionBanner({ onSearch, placeholder = '검색하기'
     const r = new SR()
     r.lang = 'ko-KR'
     r.onstart = () => setListening(true)
-    r.onresult = (e) => {
-      const text = e.results[0][0].transcript
-      setQuery(text)
-      onSearch(text)
-    }
+    r.onresult = (e) => { const t = e.results[0][0].transcript; setQuery(t); onSearch(t) }
     r.onend = () => { setListening(false); recRef.current = null }
     r.onerror = () => { setListening(false); recRef.current = null }
-    r.start()
-    recRef.current = r
+    r.start(); recRef.current = r
   }
 
   return (
     <div
-      className="dir-banner"
-      style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}
+      style={{
+        background: '#fff',
+        padding: 'max(10px, env(safe-area-inset-top)) 12px 10px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.13)',
+        zIndex: 15,
+        flexShrink: 0,
+      }}
     >
-      {/* 빨간 방향 화살표 + 펄스 링 (bobbing 애니메이션은 CSS에서 처리) */}
-      <div className="dir-banner-arrow-wrap" role="img" aria-label="내가 바라보는 방향">
-        <div className="dir-banner-pulse" aria-hidden="true" />
-        <div className="dir-banner-pulse dir-banner-pulse-2" aria-hidden="true" />
-        <div
-          className="dir-banner-arrow"
-          style={{ transform: `rotate(${-heading}deg)` }}
-          aria-hidden="true"
-        >
-          <svg viewBox="0 0 24 34" width="32" height="44">
-            <path d="M12 2 L21 30 L12 23 L3 30 Z" fill="#dc2626" />
-            <path d="M12 2 L21 30 L12 23 L3 30 Z" fill="none" stroke="rgba(220,38,38,0.3)" strokeWidth="2" />
-          </svg>
-        </div>
-      </div>
+      <form onSubmit={handleSearch}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'var(--surface)', border: '2px solid var(--border)',
+          borderRadius: 30, padding: '0 14px', minHeight: 52,
+        }}>
+          {/* 방향 화살표 (소형) */}
+          <button
+            type="button"
+            onClick={requestOrientPermission}
+            aria-label="내가 바라보는 방향"
+            style={{
+              flexShrink: 0, padding: 4,
+              transform: `rotate(${-heading}deg)`,
+              transition: 'transform 220ms ease-out',
+              color: '#dc2626',
+              display: 'flex', alignItems: 'center',
+            }}
+          >
+            <svg viewBox="0 0 24 34" width="20" height="28" aria-hidden="true">
+              <path d="M12 2 L21 30 L12 23 L3 30 Z" fill="currentColor" />
+            </svg>
+          </button>
 
-      {/* iOS 방향 권한 미승인 시 요청 버튼 */}
-      {!hasOrient && typeof DeviceOrientationEvent?.requestPermission === 'function' && (
-        <button onClick={requestOrientPermission} className="dir-banner-perm-btn">
-          방향 사용 허용
-        </button>
-      )}
+          {/* 검색 아이콘 */}
+          <SearchIcon size={20} style={{ flexShrink: 0, color: 'var(--text-soft)' }} />
 
-      {/* 검색창 */}
-      <form className="dir-banner-form" onSubmit={handleSearch}>
-        <div className="dir-banner-input-row">
-          <SearchIcon size={22} />
+          {/* 입력창 */}
           <input
             data-tutorial="home-search"
             type="search"
@@ -97,14 +90,24 @@ export default function DirectionBanner({ onSearch, placeholder = '검색하기'
             onChange={(e) => setQuery(e.target.value)}
             placeholder={placeholder}
             enterKeyHint="search"
-            className="dir-banner-input"
             aria-label="장소 검색"
+            style={{
+              flex: 1, border: 'none', background: 'transparent',
+              fontSize: 18, padding: '12px 0', outline: 'none',
+              color: 'var(--text)', minWidth: 0,
+            }}
           />
+
+          {/* 음성 검색 */}
           <button
             type="button"
             onClick={startVoice}
             aria-label="음성 검색"
-            style={{ color: listening ? 'var(--danger)' : 'var(--text-soft)', flexShrink: 0 }}
+            style={{
+              flexShrink: 0,
+              color: listening ? 'var(--danger)' : 'var(--text-soft)',
+              display: 'flex', alignItems: 'center',
+            }}
           >
             <MicIcon size={22} />
           </button>
