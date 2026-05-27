@@ -1,9 +1,10 @@
 // 공공데이터포털 실시간 대중교통 — Vercel API 라우트를 통해 호출
-// 서버 함수: /api/bus-arrival, /api/subway-arrival, /api/bus-routes
-// 키 설정은 Vercel 대시보드 환경 변수에서 (DATA_GO_KR_KEY, SEOUL_API_KEY)
+// GitHub Pages 배포 시 VITE_API_BASE=https://silvermap.vercel.app 로 설정
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 
 async function apiFetch(path) {
-  const resp = await fetch(path)
+  const resp = await fetch(`${API_BASE}${path}`)
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
   return resp.json()
 }
