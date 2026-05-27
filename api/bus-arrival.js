@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   const { stationName } = req.query
   // ws.bus.go.kr는 서울 Open API 키(SEOUL_API_KEY)로도 접근 가능
-  const RAW_KEY = process.env.SEOUL_API_KEY || process.env.DATA_GO_KR_KEY
+  const RAW_KEY = process.env.TOPIS_KEY || process.env.SEOUL_API_KEY || process.env.DATA_GO_KR_KEY
   const KEY = encodeURIComponent(RAW_KEY ?? '')
 
   if (!RAW_KEY) return res.status(500).json({ error: 'API 키 미설정', buses: [] })
