@@ -1,45 +1,30 @@
-// 버스 API 디버그 — 키 형식 + 각 단계별 원본 응답 확인용
+// 버스 API 대안 탐색 — Seoul Open API (지하철에 쓰는 SEOUL_API_KEY로 버스도 되는지 확인)
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
-  const RAW_KEY = process.env.TOPIS_KEY || process.env.SEOUL_API_KEY || process.env.DATA_GO_KR_KEY
+  const SEOUL_KEY = process.env.SEOUL_API_KEY
   const { routeNo = '273' } = req.query
+  const result = { routeNo, steps: {} }
 
-  if (!RAW_KEY) return res.json({ error: '키 미설정' })
-
-  // 키가 이미 인코딩됐는지 감지
-  const isAlreadyEncoded = RAW_KEY.includes('%')
-  const KEY_ENCODED = isAlreadyEncoded ? RAW_KEY : encodeURIComponent(RAW_KEY)
-  const KEY_RAW     = isAlreadyEncoded ? decodeURIComponent(RAW_KEY) : RAW_KEY
-
-  const result = {
-    keyFirstChars: RAW_KEY.slice(0, 8) + '...',
-    isAlreadyEncoded,
-    routeNo,
-    steps: {},
-  }
-
-  // 인코딩된 키로 시도
+  // 서울 공개API — 버스 노선 검색
   try {
-    const url = `http://ws.bus.go.kr/api/rest/busRouteInfo/getRouteInfo?ServiceKey=${KEY_ENCODED}&strSrch=${encodeURIComponent(routeNo)}&resultType=json`
+    const url = `http://openapi.seoul.go.kr:8088/${encodeURIComponent(SEOUL_KEY)}/json/busRouteList/1/5/${encodeURIComponent(routeNo)}`
     const resp = await fetch(url)
     const text = await resp.text()
-    result.steps.encodedKey = { status: resp.status, body: text.slice(0, 400) }
+    result.steps.seoulApi_busRouteList = { status: resp.status, body: text.slice(0, 500) }
   } catch (e) {
-    result.steps.encodedKey = { error: String(e) }
+    result.steps.seoulApi_busRouteList = { error: String(e) }
   }
 
-  // 디코딩된 키로도 시도 (키가 이미 인코딩된 경우)
-  if (isAlreadyEncoded) {
-    try {
-      const url = `http://ws.bus.go.kr/api/rest/busRouteInfo/getRouteInfo?ServiceKey=${KEY_RAW}&strSrch=${encodeURIComponent(routeNo)}&resultType=json`
-      const resp = await fetch(url)
-      const text = await resp.text()
-      result.steps.rawKey = { status: resp.status, body: text.slice(0, 400) }
-    } catch (e) {
-      result.steps.rawKey = { error: String(e) }
-    }
+  // 서울 공개API — 버스정류소 도착정보 (정류소 ID 예시: 22690 = 강남역)
+  try {
+    const url = `http://openapi.seoul.go.kr:8088/${encodeURIComponent(SEOUL_KEY)}/json/busArrivalByRoute/1/5/100100118/22690`
+    const resp = await fetch(url)
+    const text = await resp.text()
+    result.steps.seoulApi_busArrivalByRoute = { status: resp.status, body: text.slice(0, 500) }
+  } catch (e) {
+    result.steps.seoulApi_busArrivalByRoute = { error: String(e) }
   }
 
   return res.json(result)
