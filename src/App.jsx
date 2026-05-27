@@ -25,6 +25,7 @@ export default function App() {
   const [reservePlace, setReservePlace]   = useState(null)
   const [route, setRoute]               = useState(null)
   const [directionsSeed, setDirectionsSeed] = useState(null)
+  const [directionsSeedMode, setDirectionsSeedMode] = useState('walk')
   const [center, setCenter]             = useState(DEFAULT_CENTER)
   const [searchResult, setSearchResult] = useState(null) // { places, query }
   const [flowResults, setFlowResults]   = useState([])   // 길찾기 검색 결과
@@ -65,9 +66,10 @@ export default function App() {
 
   const onMarkerClick = useCallback((place) => setSelectedPlace(place), [])
 
-  function openDirectionsFor(place) {
+  function openDirectionsFor(place, mode = 'walk') {
     setSelectedPlace(null)
     setDirectionsSeed(place)
+    setDirectionsSeedMode(mode)
     setRoute(null)
     setMarkers([place])
     setTab('directions')
@@ -93,7 +95,7 @@ export default function App() {
   function onTabChange(next) {
     setSelectedPlace(null)
     if (tab === next && next !== 'home') { closePanel(); return }
-    if (next !== 'directions') setDirectionsSeed(null)
+    if (next !== 'directions') { setDirectionsSeed(null); setDirectionsSeedMode('walk') }
     // 탭 전환 시 이전 탭 flow 상태 초기화
     setFlowResults([])
     setReserveResults([])
@@ -195,6 +197,7 @@ export default function App() {
             key={directionsSeed?.id || 'directions'}
             from={origin}
             initialDest={directionsSeed}
+            initialMode={directionsSeedMode}
             results={flowResults}
             loading={flowLoading}
             onRoute={handleRoute}
@@ -225,7 +228,8 @@ export default function App() {
               externalQuery={transitQuery}
               userLocation={location}
               onTutAdvance={nextTutorialStep}
-              onWalkTo={(place) => { openDirectionsFor(place) }}
+              onWalkTo={(place) => { openDirectionsFor(place, 'walk') }}
+              onTransitTo={(place) => { openDirectionsFor(place, 'transit') }}
               onShowOnMap={(places) => { setMarkers(places); if (places[0]) setCenter({ lat: places[0].lat, lng: places[0].lng }) }}
             />
           </Panel>

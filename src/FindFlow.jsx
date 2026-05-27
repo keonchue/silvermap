@@ -20,9 +20,9 @@ const MODES = [
   { id: 'car',     label: '🚗 자동차' },
 ]
 
-export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, results = [], loading = false }) {
+export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, initialMode = 'walk', results = [], loading = false }) {
   const [dest, setDest]         = useState(initialDest || null)
-  const [mode, setMode]         = useState('walk')
+  const [mode, setMode]         = useState(initialMode)
   const [walkInfo, setWalkInfo] = useState(null)  // { meters, mins }
   const [carInfo, setCarInfo]   = useState(null)  // { mins }
   const [transitInfo, setTransitInfo] = useState(null)  // { duration, fare, legs }
@@ -58,8 +58,8 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, res
     const straightMeters2 = Math.round(distanceMeters(from, place))
     setTransitInfo(transitResult ?? estimateTransit(straightMeters2))
 
-    // 기본: 도보 실제 경로로 지도 초기화
-    onRoute({ path: walkResult.path, dest: place })
+    // 선택된 모드로 지도 경로 초기화
+    await applyRouteToMap(place, mode)
   }
 
   async function applyRouteToMap(place, selectedMode) {
