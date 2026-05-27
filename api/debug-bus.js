@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   let busLaneId = null
   try {
     const url = `https://api.odsay.com/v1/api/searchBusLane?apiKey=${encodeURIComponent(KEY)}&lang=0&CID=1000&busNo=${encodeURIComponent(routeNo)}`
-    const resp = await fetch(url)
+    const resp = await fetch(url, { headers: { Referer: 'https://keonchue.github.io/silvermap/' } })
     const data = await resp.json()
     result.steps.searchBusLane = { status: resp.status, data }
     const lanes = data.result?.lane
