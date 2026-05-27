@@ -9,8 +9,34 @@ async function apiFetch(path) {
   return resp.json()
 }
 
-// query: 정류장명 or 역명으로 버스·지하철 도착정보 조회
-// 반환: { buses, subways } — 둘 다 빈 배열이면 null 반환해 Kakao 폴백 트리거
+// 버스 노선 번호로 가장 가까운 정류장 도착 정보 조회
+export async function loadBusArrivalByRoute(routeNo, userLocation) {
+  if (!routeNo) return []
+  try {
+    const params = new URLSearchParams({ routeNo })
+    if (userLocation?.lat != null) params.set('lat', userLocation.lat)
+    if (userLocation?.lng != null) params.set('lng', userLocation.lng)
+    const data = await apiFetch(`/api/bus-arrival?${params}`)
+    return data.buses ?? []
+  } catch (err) {
+    console.warn('[realtimeTransit] 버스 도착정보 오류:', err)
+    return []
+  }
+}
+
+// 지하철 역명으로 실시간 도착 정보 조회
+export async function loadSubwayArrival(stationName) {
+  if (!stationName) return []
+  try {
+    const data = await apiFetch(`/api/subway-arrival?stationName=${encodeURIComponent(stationName)}`)
+    return data.subways ?? []
+  } catch (err) {
+    console.warn('[realtimeTransit] 지하철 도착정보 오류:', err)
+    return []
+  }
+}
+
+// (하위 호환) 정류장명 또는 역명으로 버스·지하철 동시 조회
 export async function loadRealtimeTransit(_userLocation, query = '') {
   if (!query) return null
 
@@ -22,18 +48,6 @@ export async function loadRealtimeTransit(_userLocation, query = '') {
   const buses   = busResult.status   === 'fulfilled' ? (busResult.value.buses     ?? []) : []
   const subways = subwayResult.status === 'fulfilled' ? (subwayResult.value.subways ?? []) : []
 
-  // 양쪽 다 빈 경우 (키 미설정 or 검색 결과 없음) → null로 Kakao 폴백
   if (buses.length === 0 && subways.length === 0) return null
-
   return { buses, subways }
-}
-
-// 버스 노선번호로 노선 정보 검색
-export async function searchBusRoutes(routeNo) {
-  try {
-    const data = await apiFetch(`/api/bus-routes?routeNo=${encodeURIComponent(routeNo)}`)
-    return data.routes ?? []
-  } catch {
-    return []
-  }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { RefreshIcon } from './icons.jsx'
-import { loadTransitOptions } from './transitService.js'
+import { loadBusArrivalByRoute, loadSubwayArrival } from './realtimeTransitService.js'
 import { searchByKeyword } from './placesService.js'
 
 function speak(text) {
@@ -28,20 +28,26 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
   const [loadError, setLoadError] = useState(null)
   const [searchedPlace, setSearchedPlace] = useState(null)
 
-  async function load(query = '') {
+  async function load(query = '', reqMode = mode) {
     setLoading(true)
     setLoadError(null)
     setSearchedPlace(null)
     try {
-      const [transitResult, places] = await Promise.all([
-        loadTransitOptions(userLocation, query),
-        query ? searchByKeyword(query, userLocation) : Promise.resolve([]),
-      ])
-      setBuses(transitResult.buses)
-      setSubways(transitResult.subways)
-      if (places.length > 0) {
-        setSearchedPlace(places[0])
-        onShowOnMap?.([places[0]])
+      if (reqMode === 'bus') {
+        const buses = await loadBusArrivalByRoute(query, userLocation)
+        setBuses(buses)
+        setSubways([])
+      } else {
+        const [subways, places] = await Promise.all([
+          loadSubwayArrival(query),
+          query ? searchByKeyword(query, userLocation) : Promise.resolve([]),
+        ])
+        setSubways(subways)
+        setBuses([])
+        if (places.length > 0) {
+          setSearchedPlace(places[0])
+          onShowOnMap?.([places[0]])
+        }
       }
     } catch (err) {
       console.error('[TransitPanel] 오류:', err)
@@ -54,7 +60,7 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
   }
 
   useEffect(() => {
-    if (externalQuery) { setInternalQuery(externalQuery); setActiveQuery(externalQuery); load(externalQuery) }
+    if (externalQuery) { setInternalQuery(externalQuery); setActiveQuery(externalQuery); load(externalQuery, mode) }
   }, [externalQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSearch(e) {
