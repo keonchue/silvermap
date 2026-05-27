@@ -140,9 +140,11 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
         </div>
       ) : list.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 32, fontSize: 'var(--fs-base)', color: 'var(--text-soft)', lineHeight: 1.8 }}>
-          {activeQuery
-            ? `'${activeQuery}' 결과가 없습니다.\n다른 정류장 이름으로 검색해 보세요.`
-            : '위 검색창에 정류장이나 역 이름을 입력해 주세요.\n예: 강남역, 홍대입구역'}
+          {!activeQuery
+            ? '위 검색창에 정류장이나 역 이름을 입력해 주세요.\n예: 강남역, 홍대입구역'
+            : mode === 'bus'
+            ? '버스 실시간 정보를 준비 중입니다.\n지하철 탭을 이용해 주세요.'
+            : `'${activeQuery}' 검색 결과가 없습니다.\n다른 역 이름으로 검색해 보세요.`}
         </div>
       ) : mode === 'bus' ? (
         buses.map((b, i) => (
