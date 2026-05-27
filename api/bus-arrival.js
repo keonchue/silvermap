@@ -89,6 +89,9 @@ export default async function handler(req, res) {
     const { eta, interval, outsideHours } = estimateNextBus(lane)
     const distanceM = isFinite(nearestDist) ? Math.round(nearestDist) : null
 
+    const stopLat = parseFloat(nearestStation.y)
+    const stopLng = parseFloat(nearestStation.x)
+
     if (outsideHours || eta === null) {
       return res.json({
         buses: [{
@@ -96,7 +99,7 @@ export default async function handler(req, res) {
           route:     lane.busNo,
           dest:      lane.busEndPoint ?? '',
           startStop: nearestStation.stationName,
-          distanceM,
+          distanceM, stopLat, stopLng,
           eta:       null,
           noService: true,
           interval,
@@ -109,11 +112,13 @@ export default async function handler(req, res) {
     const buses = [
       {
         id: `bus-${busID}-0`, route: lane.busNo, dest: lane.busEndPoint ?? '',
-        startStop: nearestStation.stationName, distanceM, eta, interval, routeColor: '#0052a4',
+        startStop: nearestStation.stationName, distanceM, stopLat, stopLng,
+        eta, interval, routeColor: '#0052a4',
       },
       {
         id: `bus-${busID}-1`, route: lane.busNo, dest: lane.busEndPoint ?? '',
-        startStop: nearestStation.stationName, distanceM, eta: eta + interval, interval, routeColor: '#0052a4',
+        startStop: nearestStation.stationName, distanceM, stopLat, stopLng,
+        eta: eta + interval, interval, routeColor: '#0052a4',
       },
     ]
 

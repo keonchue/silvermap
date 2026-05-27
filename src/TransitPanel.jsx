@@ -172,7 +172,12 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
         buses.map((b, i) => (
           <BusCard
             key={b.id} bus={b} tick={tick} first={i === 0}
-            onWalkToStop={() => onWalkTo?.(searchedPlace)}
+            onWalkToStop={() => {
+                const place = (b.stopLat && b.stopLng)
+                  ? { id: `stop-${b.id}`, name: b.startStop, lat: b.stopLat, lng: b.stopLng }
+                  : searchedPlace
+                if (place) onWalkTo?.(place)
+              }}
             onSelect={() => {
               const eta = Math.max(1, b.eta - Math.floor(tick / 2))
               speak(`${b.route}번 버스, 약 ${eta}분 후 도착 예정입니다. 탑승 위치: ${b.startStop || '근처 정류장'}`)
