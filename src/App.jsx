@@ -221,7 +221,13 @@ export default function App() {
         {/* 대중교통 패널 (전체 화면) */}
         {tab === 'transit' && (
           <Panel title="대중교통" onClose={closePanel} full>
-            <TransitPanel externalQuery={transitQuery} userLocation={location} onTutAdvance={nextTutorialStep} />
+            <TransitPanel
+              externalQuery={transitQuery}
+              userLocation={location}
+              onTutAdvance={nextTutorialStep}
+              onWalkTo={(place) => { openDirectionsFor(place) }}
+              onShowOnMap={(places) => { setMarkers(places); if (places[0]) setCenter({ lat: places[0].lat, lng: places[0].lng }) }}
+            />
           </Panel>
         )}
 

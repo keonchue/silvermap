@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RefreshIcon } from './icons.jsx'
 import { loadTransitOptions } from './transitService.js'
+import { searchByKeyword } from './placesService.js'
 
 function speak(text) {
   if (!window.speechSynthesis) return
@@ -15,7 +16,7 @@ function fmtDist(m) {
   return m < 1000 ? `${m}m` : `${(m / 1000).toFixed(1)}km`
 }
 
-export default function TransitPanel({ onTutAdvance, externalQuery = '', userLocation }) {
+export default function TransitPanel({ onTutAdvance, externalQuery = '', userLocation, onWalkTo, onShowOnMap }) {
   const [mode, setMode]         = useState('bus')
   const [buses, setBuses]       = useState([])
   const [subways, setSubways]   = useState([])
@@ -26,14 +27,23 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
   const [internalQuery, setInternalQuery] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
   const [loadError, setLoadError] = useState(null)
+  const [searchedPlace, setSearchedPlace] = useState(null)
 
   async function load(query = '') {
     setLoading(true)
     setLoadError(null)
+    setSearchedPlace(null)
     try {
-      const result = await loadTransitOptions(userLocation, query)
-      setBuses(result.buses)
-      setSubways(result.subways)
+      const [transitResult, places] = await Promise.all([
+        loadTransitOptions(userLocation, query),
+        query ? searchByKeyword(query, userLocation) : Promise.resolve([]),
+      ])
+      setBuses(transitResult.buses)
+      setSubways(transitResult.subways)
+      if (places.length > 0) {
+        setSearchedPlace(places[0])
+        onShowOnMap?.([places[0]])
+      }
     } catch (err) {
       console.error('[TransitPanel] 오류:', err)
       setLoadError(String(err))
@@ -125,6 +135,32 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
           <RefreshIcon size={18} /> 새로고침
         </button>
       </div>
+
+      {/* 검색된 장소 — 걸어가기 / 지도 보기 */}
+      {searchedPlace && !loading && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => onWalkTo?.(searchedPlace)}
+            style={{
+              flex: 1, padding: '14px 0', borderRadius: 'var(--radius)',
+              background: '#f0f7ff', border: '2px solid var(--primary)',
+              color: 'var(--primary)', fontSize: 'var(--fs-base)', fontWeight: 700,
+            }}
+          >
+            🚶 걸어가기
+          </button>
+          <button
+            onClick={() => onShowOnMap?.([searchedPlace])}
+            style={{
+              flex: 1, padding: '14px 0', borderRadius: 'var(--radius)',
+              background: '#f5f5f5', border: '2px solid var(--border)',
+              color: 'var(--text)', fontSize: 'var(--fs-base)', fontWeight: 700,
+            }}
+          >
+            🗺️ 지도 보기
+          </button>
+        </div>
+      )}
 
       {/* 오류 표시 */}
       {loadError && (
