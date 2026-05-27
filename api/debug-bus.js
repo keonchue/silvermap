@@ -19,8 +19,9 @@ export default async function handler(req, res) {
     const lanes = data.result?.lane
     if (lanes?.length) {
       const lane = lanes.find(l => l.busNo === routeNo) || lanes[0]
-      busLaneId = lane.busLaneId
+      busLaneId = lane.busID  // ODsay: busID not busLaneId
       result.busLaneId = busLaneId
+      result.laneInfo = { busNo: lane.busNo, start: lane.busStartPoint, end: lane.busEndPoint }
     }
   } catch (e) {
     result.steps.searchBusLane = { error: String(e) }
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
   if (busLaneId) {
     try {
       const url = `https://api.odsay.com/v1/api/busLaneDetail?apiKey=${encodeURIComponent(KEY)}&lang=0&CID=1000&busLaneId=${busLaneId}`
-      const resp = await fetch(url)
+      const resp = await fetch(url, { headers: { Referer: 'https://keonchue.github.io/silvermap/' } })
       const data = await resp.json()
       const stations = data.result?.station ?? []
       result.steps.busLaneDetail = {
@@ -44,7 +45,7 @@ export default async function handler(req, res) {
       if (stations[0]?.stationID) {
         const sid = stations[0].stationID
         const url2 = `https://api.odsay.com/v1/api/realtimeInfo?apiKey=${encodeURIComponent(KEY)}&lang=0&stationID=${sid}&stationMode=2`
-        const resp2 = await fetch(url2)
+        const resp2 = await fetch(url2, { headers: { Referer: 'https://keonchue.github.io/silvermap/' } })
         const data2 = await resp2.json()
         result.steps.realtimeInfo = { status: resp2.status, data: data2 }
       }
