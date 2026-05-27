@@ -1,6 +1,7 @@
-import { RouteIcon, CalendarIcon, TrainIcon, GridIcon } from './icons.jsx'
+import { HomeIcon, RouteIcon, CalendarIcon, TrainIcon, GridIcon } from './icons.jsx'
 
 const TABS = [
+  { id: 'home',       label: '홈',       Icon: HomeIcon     },
   { id: 'directions', label: '길 찾기',  Icon: RouteIcon    },
   { id: 'reserve',    label: '예약하기', Icon: CalendarIcon },
   { id: 'transit',    label: '대중교통', Icon: TrainIcon    },

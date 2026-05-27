@@ -18,8 +18,8 @@ import { CloseIcon } from './icons.jsx'
 import { searchByKeyword } from './placesService.js'
 
 export default function App() {
-  // tab: null = 지도만, 'directions' | 'reserve' | 'transit' | 'more' = 패널 열림
-  const [tab, setTab]                   = useState(null)
+  // tab: 'home' | 'directions' | 'reserve' | 'transit' | 'more'
+  const [tab, setTab]                   = useState('home')
   const [markers, setMarkers]           = useState([])
   const [selectedPlace, setSelectedPlace] = useState(null)
   const [reservePlace, setReservePlace]   = useState(null)
@@ -92,7 +92,7 @@ export default function App() {
 
   function onTabChange(next) {
     setSelectedPlace(null)
-    if (tab === next) { closePanel(); return }
+    if (tab === next && next !== 'home') { closePanel(); return }
     if (next !== 'directions') setDirectionsSeed(null)
     // 탭 전환 시 이전 탭 flow 상태 초기화
     setFlowResults([])
@@ -164,6 +164,17 @@ export default function App() {
           overlayOffset={16}
         />
 
+
+        {/* 홈 탭 — 장소 검색 + 카테고리 + 결과에서 바로 길찾기/예약/전화 */}
+        {tab === 'home' && (
+          <Panel title="장소 찾기" onClose={() => {}} full hideHeader>
+            <SearchPanel
+              from={origin}
+              onResults={setMarkers}
+              onSelectPlace={setSelectedPlace}
+            />
+          </Panel>
+        )}
 
         {/* 검색 결과 패널 (배너 검색용) */}
         {tab === 'search-result' && searchResult && (
@@ -265,7 +276,7 @@ export default function App() {
 }
 
 /* ===== Panel: 지도 위로 올라오는 바텀 시트 (full=true이면 전체 화면) ===== */
-function Panel({ title, onClose, compactTitle, children, full }) {
+function Panel({ title, onClose, compactTitle, children, full, hideHeader }) {
   const panelRef = useRef(null)
   const touchState = useRef({ startY: null, active: false })
 
@@ -302,19 +313,21 @@ function Panel({ title, onClose, compactTitle, children, full }) {
       >
         <div className="panel-handle-bar" />
       </div>
-      <div
-        className="panel-header"
-        onTouchStart={onDragStart}
-        onTouchMove={onDragMove}
-        onTouchEnd={onDragEnd}
-      >
-        <h2 className="panel-title" style={compactTitle ? { fontSize: 'var(--fs-lg)', flex: 1 } : { flex: 1 }}>
-          {title}
-        </h2>
-        <button className="icon-btn" onClick={onClose} aria-label="닫기">
-          <CloseIcon size={32} />
-        </button>
-      </div>
+      {!hideHeader && (
+        <div
+          className="panel-header"
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+        >
+          <h2 className="panel-title" style={compactTitle ? { fontSize: 'var(--fs-lg)', flex: 1 } : { flex: 1 }}>
+            {title}
+          </h2>
+          <button className="icon-btn" onClick={onClose} aria-label="닫기">
+            <CloseIcon size={32} />
+          </button>
+        </div>
+      )}
       <div className="panel-body">{children}</div>
     </section>
   )
