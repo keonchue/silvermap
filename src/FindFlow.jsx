@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { distanceMeters } from './placesService.js'
-import { getRoadRoute, getTransitRoute } from './routeService.js'
+import { getRoadRoute, getTransitRoute, getWalkRoute, estimateTransit } from './routeService.js'
 
 function speak(text) {
   if (!window.speechSynthesis) return
@@ -39,34 +39,37 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, res
   }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAllRoutes(place) {
-    const meters = Math.round(distanceMeters(from, place))
-    const walkMins = Math.ceil(meters / 60)
-    setWalkInfo({ meters, mins: walkMins })
-
     setRouteLoading(true)
-    const [carResult, transitResult] = await Promise.all([
+    const [walkResult, carResult, transitResult] = await Promise.all([
+      getWalkRoute(from, place),
       getRoadRoute(from, place),
       getTransitRoute(from, place),
     ])
     setRouteLoading(false)
 
+    const straightMeters = Math.round(distanceMeters(from, place))
+    setWalkInfo({
+      meters: walkResult.distance ?? straightMeters,
+      mins:   walkResult.duration ?? Math.ceil(straightMeters / 60),
+    })
     if (carResult.duration) {
       setCarInfo({ mins: Math.round(carResult.duration / 60) })
     }
-    if (transitResult) {
-      setTransitInfo(transitResult)
-    }
+    const straightMeters2 = Math.round(distanceMeters(from, place))
+    setTransitInfo(transitResult ?? estimateTransit(straightMeters2))
 
-    // 기본 도보 직선으로 지도 초기화
-    onRoute({ path: [from, place], dest: place })
+    // 기본: 도보 실제 경로로 지도 초기화
+    onRoute({ path: walkResult.path, dest: place })
   }
 
   async function applyRouteToMap(place, selectedMode) {
-    if (selectedMode === 'car') {
+    if (selectedMode === 'walk') {
+      const result = await getWalkRoute(from, place)
+      onRoute({ path: result.path, dest: place })
+    } else if (selectedMode === 'car') {
       const result = await getRoadRoute(from, place)
       onRoute({ path: result.path, dest: place })
     } else {
-      // 도보·대중교통은 직선 표시 (카카오 도보 전용 API 없음)
       onRoute({ path: [from, place], dest: place })
     }
   }
@@ -241,23 +244,30 @@ function TransitLegs({ info }) {
         <Stat label="총 소요" value={`약 ${info.duration}분`} />
         {info.fare > 0 && <Stat label="요금" value={`${info.fare.toLocaleString()}원`} />}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
-        {info.legs.map((leg, i) => (
-          <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {i > 0 && <span style={{ color: 'var(--text-soft)', fontSize: 13 }}>→</span>}
-            <span style={{
-              background: leg.color || (leg.mode === 'BUS' ? '#0052a4' : leg.mode === 'SUBWAY' ? '#00a84d' : '#888'),
-              color: '#fff', borderRadius: 8, padding: '3px 8px',
-              fontSize: 13, fontWeight: 700,
-            }}>
-              {modeIcon[leg.mode] || '•'} {leg.route || `${leg.duration}분`}
+      {info.legs.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+          {info.legs.map((leg, i) => (
+            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              {i > 0 && <span style={{ color: 'var(--text-soft)', fontSize: 13 }}>→</span>}
+              <span style={{
+                background: leg.color || (leg.mode === 'BUS' ? '#0052a4' : leg.mode === 'SUBWAY' ? '#00a84d' : '#888'),
+                color: '#fff', borderRadius: 8, padding: '3px 8px',
+                fontSize: 13, fontWeight: 700,
+              }}>
+                {modeIcon[leg.mode] || '•'} {leg.route || `${leg.duration}분`}
+              </span>
             </span>
-          </span>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
       {info.legs[0]?.startName && (
         <div style={{ fontSize: 13, color: 'var(--text-soft)' }}>
           출발: {info.legs[0].startName}
+        </div>
+      )}
+      {info.isEstimate && (
+        <div style={{ fontSize: 13, color: 'var(--text-soft)', textAlign: 'center', marginTop: 2 }}>
+          ※ 거리 기반 예상 시간 · 실제와 다를 수 있어요
         </div>
       )}
     </div>
