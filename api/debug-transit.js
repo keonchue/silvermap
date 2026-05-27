@@ -66,5 +66,17 @@ export default async function handler(req, res) {
     result.error = String(e)
   }
 
+  // 실제 /api/subway-arrival 엔드포인트 호출 테스트
+  try {
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000'
+    const proto = req.headers['x-forwarded-proto'] || 'https'
+    const subwayUrl = `${proto}://${host}/api/subway-arrival?stationName=${encodeURIComponent('강남역')}`
+    const subwayResp = await fetch(subwayUrl)
+    const subwayData = await subwayResp.json()
+    result.subway_arrival_endpoint = { status: subwayResp.status, data: subwayData }
+  } catch (e) {
+    result.subway_arrival_endpoint = { error: String(e) }
+  }
+
   return res.json(result)
 }
