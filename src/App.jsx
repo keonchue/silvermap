@@ -421,7 +421,7 @@ function SnapSheet({ children }) {
         display: 'flex', flexDirection: 'column',
         transition: 'height 300ms cubic-bezier(0.34,1.1,0.64,1)',
         zIndex: 20,
-        overflowX: 'hidden',   // 수평 이동 완전 차단
+        overflow: 'hidden',   // 수평·수직 오버플로 클리핑 (border-radius 포함)
       }}
     >
       {/* 드래그 핸들 — touchAction: pan-y 로 수직 드래그만 허용 */}
