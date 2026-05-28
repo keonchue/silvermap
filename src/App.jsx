@@ -154,8 +154,8 @@ export default function App() {
       {/* ① 최상단: 빨간 방향 화살표 배너 (항상 표시) */}
       <ArrowBanner />
 
-      {/* ② 검색창 (대중교통 탭에서는 숨김 — 탭 내 검색창 사용) */}
-      {tab !== 'transit' && (
+      {/* ② 검색창 (홈·대중교통 탭에서는 숨김) */}
+      {tab !== 'transit' && tab !== 'home' && (
         <DirectionBanner
           onSearch={onBannerSearch}
           placeholder={
@@ -180,15 +180,15 @@ export default function App() {
         />
 
 
-        {/* 홈 탭 — 드래그 가능한 바텀 시트 (지도 위에 걸쳐 있음) */}
+        {/* 홈 탭 — 고정 바텀 패널 (드래그 없음) */}
         {tab === 'home' && (
-          <SnapSheet>
+          <HomePanel>
             <SearchPanel
               from={origin}
               onResults={setMarkers}
               onSelectPlace={setSelectedPlace}
             />
-          </SnapSheet>
+          </HomePanel>
         )}
 
         {/* 검색 결과 패널 (배너 검색용) */}
@@ -362,83 +362,32 @@ function Panel({ title, onClose, compactTitle, children, full, hideHeader }) {
   )
 }
 
-/* ===== SnapSheet: 마우스·터치 드래그로 높이 조절, 놓으면 가장 가까운 스냅 ===== */
-function SnapSheet({ children }) {
-  const SNAPS = [30, 60, 90] // 컨테이너 높이 대비 %
-  const [snap, setSnap] = useState(0) // 기본: 30% (지도 더 넓게 보임)
-  const sheetRef = useRef(null)
-  const drag     = useRef({ active: false, startY: 0, startH: 0, snapIdx: 1 })
-
-  // drag.current.snapIdx 최신값 유지
-  useEffect(() => { drag.current.snapIdx = snap }, [snap])
-
-  function containerH() {
-    return sheetRef.current?.parentElement?.clientHeight ?? window.innerHeight
-  }
-  function snapH(i) { return (SNAPS[i] / 100) * containerH() }
-
-  function dragStart(clientY) {
-    drag.current = { active: true, startY: clientY, startH: snapH(drag.current.snapIdx), snapIdx: drag.current.snapIdx }
-    if (sheetRef.current) sheetRef.current.style.transition = 'none'
-  }
-  function dragMove(clientY) {
-    if (!drag.current.active || !sheetRef.current) return
-    const dy  = drag.current.startY - clientY // 위로 끌면 양수
-    const min = snapH(0), max = snapH(SNAPS.length - 1)
-    const h   = Math.min(Math.max(drag.current.startH + dy, min), max)
-    sheetRef.current.style.height = `${h}px`
-  }
-  function dragEnd(clientY) {
-    if (!drag.current.active) return
-    drag.current.active = false
-    const dy   = drag.current.startY - clientY
-    const curH = drag.current.startH + dy
-    const pct  = (curH / containerH()) * 100
-    let nearest = 0, minDist = Infinity
-    SNAPS.forEach((s, i) => { const d = Math.abs(s - pct); if (d < minDist) { minDist = d; nearest = i } })
-    if (sheetRef.current) sheetRef.current.style.transition = 'height 300ms cubic-bezier(0.34,1.1,0.64,1)'
-    setSnap(nearest)
-  }
-
-  // 마우스 이벤트는 window에 붙여야 handle 밖으로 나가도 추적됨
-  useEffect(() => {
-    const mm = (e) => dragMove(e.clientY)
-    const mu = (e) => dragEnd(e.clientY)
-    window.addEventListener('mousemove', mm)
-    window.addEventListener('mouseup',   mu)
-    return () => { window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu) }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
+/* ===== HomePanel: 홈 탭 고정 바텀 패널 (드래그 없음) ===== */
+function HomePanel({ children }) {
   return (
     <div
-      ref={sheetRef}
       style={{
         position: 'absolute', left: 0, right: 0, bottom: 0,
-        height: `${SNAPS[snap]}%`,
+        height: '58%',
         background: '#fff',
         borderRadius: '24px 24px 0 0',
         boxShadow: '0 -4px 24px rgba(21,35,59,0.18)',
         display: 'flex', flexDirection: 'column',
-        transition: 'height 300ms cubic-bezier(0.34,1.1,0.64,1)',
         zIndex: 20,
       }}
     >
-      {/* 드래그 핸들 — 터치·마우스 모두 지원 */}
-      <div
-        onMouseDown={(e) => dragStart(e.clientY)}
-        onTouchStart={(e) => dragStart(e.touches[0].clientY)}
-        onTouchMove={(e) => { e.preventDefault(); dragMove(e.touches[0].clientY) }}
-        onTouchEnd={(e) => dragEnd(e.changedTouches[0].clientY)}
-        style={{
-          padding: '14px 0 12px', flexShrink: 0,
-          display: 'flex', justifyContent: 'center',
-          cursor: 'ns-resize', touchAction: 'none', userSelect: 'none',
-        }}
-      >
-        <div style={{ width: 52, height: 6, borderRadius: 3, background: 'var(--border)' }} />
+      {/* 장식용 바 (드래그 안 됨) */}
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
+        <div style={{ width: 44, height: 5, borderRadius: 3, background: 'var(--border)' }} />
       </div>
-
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 16px', WebkitOverflowScrolling: 'touch' }}>
+      {/* 스크롤 가능한 내용 */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '4px 20px',
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+        WebkitOverflowScrolling: 'touch',
+      }}>
         {children}
       </div>
     </div>

@@ -15,6 +15,17 @@ export default function ArrowBanner() {
     return () => window.removeEventListener('deviceorientation', onOrient, true)
   }, [])
 
+  // iOS: 마운트 즉시 방향 권한 요청 (탭하지 않아도 자동)
+  useEffect(() => {
+    async function autoRequest() {
+      try {
+        if (typeof DeviceOrientationEvent?.requestPermission === 'function')
+          await DeviceOrientationEvent.requestPermission()
+      } catch {}
+    }
+    autoRequest()
+  }, [])
+
   async function requestPermission() {
     try {
       if (typeof DeviceOrientationEvent?.requestPermission === 'function')
@@ -29,10 +40,10 @@ export default function ArrowBanner() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      height: 'calc(44px + env(safe-area-inset-top, 0px))',
+      height: 'calc(56px + env(safe-area-inset-top, 0px))',
       flexShrink: 0,
       zIndex: 16,
-      boxShadow: '0 1px 0 rgba(0,0,0,0.06)',
+      boxShadow: '0 1px 0 rgba(0,0,0,0.07)',
     }}>
       <button
         onClick={requestPermission}
@@ -47,12 +58,12 @@ export default function ArrowBanner() {
           justifyContent: 'center',
           transform: `rotate(${-heading}deg)`,
           transition: 'transform 200ms ease-out',
-          filter: 'drop-shadow(0 2px 6px rgba(220,38,38,0.5))',
+          filter: 'drop-shadow(0 3px 8px rgba(220,38,38,0.55))',
           animation: 'arrow-bob 2s ease-in-out infinite',
         }}
       >
-        <svg viewBox="0 0 28 40" width="28" height="40" aria-hidden="true">
-          <path d="M14 2 L24 36 L14 28 L4 36 Z" fill="#dc2626" />
+        <svg viewBox="0 0 36 52" width="36" height="52" aria-hidden="true">
+          <path d="M18 3 L31 47 L18 37 L5 47 Z" fill="#dc2626" />
         </svg>
       </button>
     </div>
