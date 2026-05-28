@@ -28,8 +28,8 @@ export default function DirectionBanner({ onSearch, placeholder = '검색하기'
   return (
     <div
       style={{
-        background: '#fff',
-        padding: '8px 12px 10px',
+        background: 'var(--card)',
+        padding: '10px 16px 12px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.13)',
         zIndex: 15,
         flexShrink: 0,
@@ -38,8 +38,8 @@ export default function DirectionBanner({ onSearch, placeholder = '검색하기'
       <form onSubmit={handleSearch}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          background: 'var(--surface)', border: '2px solid var(--border)',
-          borderRadius: 30, padding: '0 14px', minHeight: 56,
+          background: 'var(--bg)', border: '2px solid var(--border)',
+          borderRadius: 'var(--radius-pill)', padding: '0 16px', minHeight: 56,
         }}>
           {/* 검색 아이콘 */}
           <SearchIcon size={22} style={{ flexShrink: 0, color: 'var(--text-soft)' }} />

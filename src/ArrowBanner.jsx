@@ -35,7 +35,7 @@ export default function ArrowBanner() {
 
   return (
     <div style={{
-      background: '#fff',
+      background: 'var(--card)',
       paddingTop: 'env(safe-area-inset-top, 0px)',
       display: 'flex',
       alignItems: 'center',
@@ -43,7 +43,7 @@ export default function ArrowBanner() {
       height: 'calc(56px + env(safe-area-inset-top, 0px))',
       flexShrink: 0,
       zIndex: 16,
-      boxShadow: '0 1px 0 rgba(0,0,0,0.07)',
+      boxShadow: 'var(--shadow-sm)',
     }}>
       <button
         onClick={requestPermission}

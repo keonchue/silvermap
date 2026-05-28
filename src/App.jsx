@@ -150,7 +150,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: 'var(--bg)' }}>
       {/* ① 최상단: 빨간 방향 화살표 배너 (항상 표시) */}
       <ArrowBanner />
 
@@ -238,13 +238,13 @@ export default function App() {
         {tab === 'transit' && (
           <div style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            background: '#fff', display: 'flex', flexDirection: 'column',
+            background: 'var(--card)', display: 'flex', flexDirection: 'column',
             zIndex: 20, overflow: 'hidden',
           }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '10px 20px 14px',
-              borderBottom: '2px solid var(--surface-2)',
+              borderBottom: '1px solid var(--border)',
               flexShrink: 0,
             }}>
               <h2 style={{ flex: 1, fontSize: 'var(--fs-xl)', fontWeight: 900 }}>대중교통</h2>
@@ -437,7 +437,7 @@ function SnapSheet({ children }) {
       style={{
         position: 'absolute', left: 0, right: 0, bottom: 0,
         height: `${SNAPS[snap]}%`,
-        background: '#fff',
+        background: 'var(--card)',
         borderRadius: '24px 24px 0 0',
         boxShadow: '0 -4px 24px rgba(21,35,59,0.18)',
         display: 'flex', flexDirection: 'column',

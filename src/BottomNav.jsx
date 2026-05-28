@@ -14,8 +14,8 @@ export default function BottomNav({ active, onChange }) {
       aria-label="주요 메뉴"
       style={{
         display: 'flex',
-        borderTop: '2px solid var(--surface-2)',
-        background: 'var(--bg)',
+        borderTop: '1px solid var(--border)',
+        background: 'var(--card)',
         paddingBottom: 'env(safe-area-inset-bottom)',
         flexShrink: 0,
       }}
@@ -29,28 +29,20 @@ export default function BottomNav({ active, onChange }) {
             aria-current={on ? 'page' : undefined}
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: 3, padding: '8px 2px 10px', minHeight: 68,
+              gap: 4, padding: '8px 2px 10px', minHeight: 68,
               color: on ? 'var(--primary)' : 'var(--text-soft)',
               background: 'transparent', fontWeight: on ? 900 : 700,
-              position: 'relative',
             }}
           >
-            {on && (
-              <span style={{
-                position: 'absolute', top: 0, left: '10%', right: '10%',
-                height: 3, borderRadius: '0 0 3px 3px',
-                background: 'var(--primary)',
-              }} />
-            )}
             <span style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 40, height: 32, borderRadius: 10,
-              background: on ? 'var(--surface)' : 'transparent',
+              height: 36, padding: '0 12px', borderRadius: 999,
+              background: on ? 'var(--primary-50)' : 'transparent',
               transition: 'background 150ms',
             }}>
               <Icon size={24} />
             </span>
-            <span style={{ fontSize: 11, lineHeight: 1, letterSpacing: '-0.3px' }}>{label}</span>
+            <span style={{ fontSize: 13, lineHeight: 1 }}>{label}</span>
           </button>
         )
       })}

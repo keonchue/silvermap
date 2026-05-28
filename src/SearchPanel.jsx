@@ -77,7 +77,7 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
       <form onSubmit={onSubmit} style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <div style={{
           flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8,
-          background: 'var(--surface)', borderRadius: 'var(--radius)',
+          background: 'var(--bg)', borderRadius: 'var(--radius-pill)',
           padding: '0 14px', border: '2px solid var(--border)',
         }}>
           <SearchIcon size={22} />
@@ -130,6 +130,38 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
         </div>
       )}
 
+      {/* 자주 가는 곳 */}
+      {!searched && (
+        <div style={{ marginBottom: 18 }}>
+          <p style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--text-soft)', marginBottom: 10 }}>
+            자주 가는 곳
+          </p>
+          <button
+            className="qrow"
+            onClick={() => runSearch(searchByKeyword('집', from), '집 근처 길찾기')}
+          >
+            <span className="q-ico">🏠</span>
+            <span className="q-body">
+              <div className="q-title">집</div>
+              <div className="q-sub">자주 가는 곳 · 저장됨</div>
+            </span>
+            <span className="q-go">›</span>
+          </button>
+          <button
+            className="qrow"
+            onClick={() => runSearch(searchByKeyword('약국', from), '내 주변 약국')}
+            style={{ marginTop: 10 }}
+          >
+            <span className="q-ico">💊</span>
+            <span className="q-body">
+              <div className="q-title">단골 약국</div>
+              <div className="q-sub">근처 약국 찾기</div>
+            </span>
+            <span className="q-go">›</span>
+          </button>
+        </div>
+      )}
+
       {/* 자주 찾는 카테고리 */}
       {!searched && (
         <>
@@ -146,7 +178,7 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                     gap: 6, padding: '12px 4px', minHeight: 86,
-                    background: 'var(--surface)', border: '2px solid var(--border)',
+                    background: 'var(--bg)', border: '2px solid var(--border)',
                     borderRadius: 'var(--radius)', color: cat.color, fontWeight: 700,
                   }}
                   aria-label={`내 주변 ${cat.label} 찾기`}

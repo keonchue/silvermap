@@ -106,7 +106,7 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
       {loading && (
         <div style={{
           position: 'absolute', top: 12, left: 12, right: 12,
-          background: '#fff', borderRadius: 14, padding: '16px 18px',
+          background: 'var(--card)', borderRadius: 14, padding: '16px 18px',
           textAlign: 'center', fontSize: 18, fontWeight: 700,
           boxShadow: '0 4px 14px rgba(0,0,0,0.15)', pointerEvents: 'auto',
         }}>
@@ -118,7 +118,7 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
       {showResults && (
         <div style={{
           position: 'absolute', top: 12, left: 12, right: 12,
-          background: '#fff', borderRadius: 14,
+          background: 'var(--card)', borderRadius: 'var(--radius-lg)',
           boxShadow: '0 6px 20px rgba(0,0,0,0.22)',
           overflow: 'hidden', pointerEvents: 'auto',
         }}>
@@ -128,8 +128,8 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
               data-tutorial={i === 0 ? 'dest-result' : undefined}
               onClick={() => selectDest(p)}
               style={{
-                padding: '16px 18px', cursor: 'pointer',
-                borderBottom: i < results.length - 1 ? '1px solid #eef2f7' : 'none',
+                padding: '14px 18px', cursor: 'pointer',
+                borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none',
               }}
             >
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{p.name}</div>
@@ -141,135 +141,201 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
         </div>
       )}
 
-      {/* 목적지 선택 후: 모드 선택 + 경로 정보 + 안내 시작 */}
+      {/* 목적지 선택 후: 바텀 패널 */}
       {showRouteUI && (
         <>
-          {/* 교통 수단 선택 */}
+          {/* Bottom panel */}
           <div style={{
-            position: 'absolute', top: 12, left: 12, right: 12,
-            background: '#fff', borderRadius: 14,
-            boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-            overflow: 'hidden', pointerEvents: 'auto',
+            position: 'absolute', left: 0, right: 0, bottom: 0,
+            background: 'var(--card)',
+            borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
+            boxShadow: 'var(--shadow-lg)',
+            pointerEvents: 'auto',
+            overflow: 'hidden',
           }}>
-            {/* 목적지 표시 */}
-            <div style={{
-              padding: '14px 18px 10px',
-              borderBottom: '1px solid #eef2f7',
-              fontSize: 16, fontWeight: 700, color: 'var(--text)',
-            }}>
-              📍 {dest.name}
+            {/* Grab handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+              <div style={{ width: 56, height: 5, borderRadius: 99, background: 'var(--border)' }} />
             </div>
 
-            {/* 모드 탭 */}
-            <div style={{ display: 'flex' }}>
-              {MODES.map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => setMode(id)}
-                  style={{
-                    flex: 1, padding: '12px 6px',
-                    fontSize: 15, fontWeight: mode === id ? 900 : 600,
-                    color: mode === id ? 'var(--primary)' : 'var(--text-soft)',
-                    borderBottom: mode === id ? '3px solid var(--primary)' : '3px solid transparent',
-                    background: 'none', transition: 'all 120ms',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+            {/* OD display */}
+            <div className="route-od">
+              <div className="od-row">
+                <span className="od-dot-me" />
+                <span className="od-label">출발</span>
+                <span className="od-place">내 위치</span>
+              </div>
+              <div className="od-line" />
+              <div className="od-row">
+                <span style={{ color: 'var(--primary)', fontSize: 18, flex: 'none' }}>📍</span>
+                <span className="od-label">도착</span>
+                <span className="od-place">{dest.name}</span>
+              </div>
             </div>
 
-            {/* 경로 정보 */}
-            <div style={{ padding: '14px 18px' }}>
-              {routeLoading ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-soft)', fontSize: 15 }}>
-                  경로 계산 중...
-                </div>
-              ) : mode === 'walk' && walkInfo ? (
-                <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
-                  <Stat label="거리" value={fmtDist(walkInfo.meters)} />
-                  <Stat label="예상 시간" value={`약 ${walkInfo.mins}분`} />
-                </div>
-              ) : mode === 'car' && carInfo ? (
-                <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
-                  <Stat label="예상 시간" value={`약 ${carInfo.mins}분`} />
-                  <Stat label="경로" value="카카오 내비" />
-                </div>
-              ) : mode === 'transit' && transitInfo ? (
-                <TransitLegs info={transitInfo} />
-              ) : (
-                <div style={{ textAlign: 'center', color: 'var(--text-soft)', fontSize: 15 }}>
-                  {mode === 'transit' ? '대중교통 경로를 찾을 수 없습니다' : '경로 정보 없음'}
-                </div>
-              )}
+            {/* Mode selector */}
+            <div className="mode-grid">
+              {MODES.map(({ id, label }) => {
+                const timeStr = id === 'walk' ? (walkInfo ? `${walkInfo.mins}분` : '—')
+                              : id === 'car' ? (carInfo ? `${carInfo.mins}분` : '—')
+                              : (transitInfo ? `${transitInfo.duration}분` : '—')
+                const icon = id === 'walk' ? '🚶' : id === 'transit' ? '🚌' : '🚗'
+                return (
+                  <button
+                    key={id}
+                    className={'mode-btn' + (mode === id ? ' active' : '')}
+                    onClick={() => setMode(id)}
+                  >
+                    <span style={{ fontSize: 24 }}>{icon}</span>
+                    <span className="mode-time">{routeLoading ? '...' : timeStr}</span>
+                    <span className="mode-label">{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Route details */}
+            {!routeLoading && (
+              <div className="route-card">
+                {mode === 'walk' && walkInfo && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+                      <span className="rc-time">{walkInfo.mins}분</span>
+                      <span className="rc-arrive">도보 도착</span>
+                      <span className="rc-fare">무료</span>
+                    </div>
+                    <div className="steps">
+                      <div className="step">
+                        <div className="s-rail">
+                          <span className="s-badge" style={{ background: 'var(--text-soft)' }}>🚶</span>
+                          <span className="s-stem" />
+                        </div>
+                        <div className="s-body">
+                          <div className="s-act">도보 {walkInfo.mins}분</div>
+                          <div className="s-det">{fmtDist(walkInfo.meters)} 거리</div>
+                        </div>
+                      </div>
+                      <div className="step">
+                        <div className="s-rail">
+                          <span className="s-badge" style={{ background: 'var(--success)' }}>🏁</span>
+                        </div>
+                        <div className="s-body">
+                          <div className="s-act">{dest.name} 도착</div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {mode === 'car' && carInfo && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+                      <span className="rc-time">{carInfo.mins}분</span>
+                      <span className="rc-arrive">자동차 도착</span>
+                    </div>
+                    <div className="steps">
+                      <div className="step">
+                        <div className="s-rail">
+                          <span className="s-badge" style={{ background: 'var(--text)' }}>🚗</span>
+                          <span className="s-stem" />
+                        </div>
+                        <div className="s-body">
+                          <div className="s-act">자동차 약 {carInfo.mins}분</div>
+                          <div className="s-det">카카오 내비</div>
+                        </div>
+                      </div>
+                      <div className="step">
+                        <div className="s-rail">
+                          <span className="s-badge" style={{ background: 'var(--success)' }}>🏁</span>
+                        </div>
+                        <div className="s-body">
+                          <div className="s-act">{dest.name} 도착</div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {mode === 'transit' && transitInfo && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+                      <span className="rc-time">{transitInfo.duration}분</span>
+                      <span className="rc-arrive">대중교통 도착</span>
+                      {transitInfo.fare > 0 && <span className="rc-fare">{transitInfo.fare.toLocaleString()}원</span>}
+                    </div>
+                    <div className="steps">
+                      {transitInfo.legs && transitInfo.legs.length > 0 ? (
+                        transitInfo.legs.map((leg, i) => {
+                          const isLast = i === transitInfo.legs.length - 1
+                          const bg = leg.mode === 'BUS' ? 'var(--primary)' : leg.mode === 'SUBWAY' ? 'var(--success)' : 'var(--text-soft)'
+                          const icon = leg.mode === 'BUS' ? '🚌' : leg.mode === 'SUBWAY' ? '🚇' : '🚶'
+                          return (
+                            <div className="step" key={i}>
+                              <div className="s-rail">
+                                <span className="s-badge" style={{ background: bg }}>{icon}</span>
+                                {!isLast && <span className="s-stem" />}
+                              </div>
+                              <div className="s-body">
+                                <div className="s-act">{leg.route ? `${leg.route} 타기` : `도보 ${leg.duration}분`}</div>
+                                {leg.startName && <div className="s-det">{leg.startName}</div>}
+                              </div>
+                            </div>
+                          )
+                        })
+                      ) : (
+                        <div className="step">
+                          <div className="s-rail">
+                            <span className="s-badge" style={{ background: 'var(--primary)' }}>🚌</span>
+                            <span className="s-stem" />
+                          </div>
+                          <div className="s-body">
+                            <div className="s-act">대중교통 약 {transitInfo.duration}분</div>
+                            {transitInfo.isEstimate && <div className="s-det">거리 기반 예상 시간</div>}
+                          </div>
+                        </div>
+                      )}
+                      <div className="step">
+                        <div className="s-rail">
+                          <span className="s-badge" style={{ background: 'var(--success)' }}>🏁</span>
+                        </div>
+                        <div className="s-body">
+                          <div className="s-act">{dest.name} 도착</div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {!walkInfo && !carInfo && !transitInfo && (
+                  <div style={{ textAlign: 'center', color: 'var(--text-soft)', fontSize: 15, padding: '8px 0' }}>
+                    경로 정보 없음
+                  </div>
+                )}
+              </div>
+            )}
+            {routeLoading && (
+              <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-soft)', fontSize: 'var(--fs-base)' }}>
+                경로 계산 중...
+              </div>
+            )}
+
+            {/* Start nav button */}
+            <div style={{ padding: '0 18px', paddingBottom: 'max(18px, env(safe-area-inset-bottom))' }}>
+              <button
+                data-tutorial="go"
+                onClick={startNav}
+                style={{
+                  width: '100%', minHeight: 64, padding: '0 24px',
+                  background: 'var(--success)', color: '#fff',
+                  borderRadius: 'var(--radius)', fontSize: 22, fontWeight: 900,
+                  boxShadow: '0 8px 20px rgba(28,157,89,.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                }}
+              >
+                🔊 안내 시작
+              </button>
             </div>
           </div>
-
-          {/* 안내 시작 버튼 */}
-          <button
-            data-tutorial="go"
-            onClick={startNav}
-            style={{
-              position: 'absolute', bottom: 20, left: 16, right: 16,
-              background: 'var(--primary)', color: '#fff',
-              padding: '20px', borderRadius: 18,
-              fontSize: 22, fontWeight: 900,
-              boxShadow: '0 6px 20px rgba(25,87,200,0.45)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              pointerEvents: 'auto',
-            }}
-          >
-            ↗ 안내 시작
-          </button>
         </>
       )}
     </div>
   )
 }
 
-function Stat({ label, value }) {
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--primary)' }}>{value}</div>
-      <div style={{ fontSize: 13, color: 'var(--text-soft)', marginTop: 2 }}>{label}</div>
-    </div>
-  )
-}
-
-function TransitLegs({ info }) {
-  const modeIcon = { BUS: '🚌', SUBWAY: '🚇', WALK: '🚶' }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginBottom: 4 }}>
-        <Stat label="총 소요" value={`약 ${info.duration}분`} />
-        {info.fare > 0 && <Stat label="요금" value={`${info.fare.toLocaleString()}원`} />}
-      </div>
-      {info.legs.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
-          {info.legs.map((leg, i) => (
-            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              {i > 0 && <span style={{ color: 'var(--text-soft)', fontSize: 13 }}>→</span>}
-              <span style={{
-                background: leg.color || (leg.mode === 'BUS' ? '#0052a4' : leg.mode === 'SUBWAY' ? '#00a84d' : '#888'),
-                color: '#fff', borderRadius: 8, padding: '3px 8px',
-                fontSize: 13, fontWeight: 700,
-              }}>
-                {modeIcon[leg.mode] || '•'} {leg.route || `${leg.duration}분`}
-              </span>
-            </span>
-          ))}
-        </div>
-      )}
-      {info.legs[0]?.startName && (
-        <div style={{ fontSize: 13, color: 'var(--text-soft)' }}>
-          출발: {info.legs[0].startName}
-        </div>
-      )}
-      {info.isEstimate && (
-        <div style={{ fontSize: 13, color: 'var(--text-soft)', textAlign: 'center', marginTop: 2 }}>
-          ※ 거리 기반 예상 시간 · 실제와 다를 수 있어요
-        </div>
-      )}
-    </div>
-  )
-}
