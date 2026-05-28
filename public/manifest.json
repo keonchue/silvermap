@@ -3,10 +3,11 @@
   "short_name": "큰지도",
   "description": "어르신을 위한 큰 글자 지도 앱",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1957c8",
-  "theme_color": "#1957c8",
+  "background_color": "#1857c9",
+  "theme_color": "#1857c9",
   "lang": "ko",
   "icons": [
     {
