@@ -76,7 +76,7 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
       {/* 검색창 */}
       <form onSubmit={onSubmit} style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <div style={{
-          flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+          flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8,
           background: 'var(--surface)', borderRadius: 'var(--radius)',
           padding: '0 14px', border: '2px solid var(--border)',
         }}>

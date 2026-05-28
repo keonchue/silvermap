@@ -234,18 +234,40 @@ export default function App() {
           </Panel>
         )}
 
-        {/* 대중교통 패널 (전체 화면) */}
+        {/* 대중교통 — 고정 전체 화면 (드래그 없음) */}
         {tab === 'transit' && (
-          <Panel title="대중교통" onClose={closePanel} full>
-            <TransitPanel
-              externalQuery={transitQuery}
-              userLocation={location}
-              onTutAdvance={nextTutorialStep}
-              onWalkTo={(place) => { openDirectionsFor(place, 'walk') }}
-              onTransitTo={(place) => { openDirectionsFor(place, 'transit') }}
-              onShowOnMap={(places) => { setMarkers(places); if (places[0]) setCenter({ lat: places[0].lat, lng: places[0].lng }) }}
-            />
-          </Panel>
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            background: '#fff', display: 'flex', flexDirection: 'column',
+            zIndex: 20, overflow: 'hidden',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 20px 14px',
+              borderBottom: '2px solid var(--surface-2)',
+              flexShrink: 0,
+            }}>
+              <h2 style={{ flex: 1, fontSize: 'var(--fs-xl)', fontWeight: 900 }}>대중교통</h2>
+              <button className="icon-btn" onClick={closePanel} aria-label="닫기">
+                <CloseIcon size={32} />
+              </button>
+            </div>
+            <div style={{
+              flex: 1, overflowY: 'auto', overflowX: 'hidden',
+              padding: '16px 20px',
+              paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+              WebkitOverflowScrolling: 'touch',
+            }}>
+              <TransitPanel
+                externalQuery={transitQuery}
+                userLocation={location}
+                onTutAdvance={nextTutorialStep}
+                onWalkTo={(place) => { openDirectionsFor(place, 'walk') }}
+                onTransitTo={(place) => { openDirectionsFor(place, 'transit') }}
+                onShowOnMap={(places) => { setMarkers(places); if (places[0]) setCenter({ lat: places[0].lat, lng: places[0].lng }) }}
+              />
+            </div>
+          </div>
         )}
 
         {/* 더보기 패널 */}

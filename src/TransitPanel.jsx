@@ -111,7 +111,7 @@ export default function TransitPanel({ onTutAdvance, externalQuery = '', userLoc
           placeholder={mode === 'bus' ? '버스 번호 입력 (예: 273, 9호선)' : '역 이름 입력 (예: 강남역, 홍대입구역)'}
           enterKeyHint="search"
           style={{
-            flex: 1, padding: '14px 16px', fontSize: 'var(--fs-base)',
+            flex: 1, minWidth: 0, padding: '14px 16px', fontSize: 'var(--fs-base)',
             border: '2px solid var(--border)', borderRadius: 'var(--radius)',
             outline: 'none',
           }}
