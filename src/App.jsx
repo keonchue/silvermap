@@ -48,7 +48,7 @@ export default function App() {
   const tutSteps = tutTab ? TUTORIALS[tutTab] : null
 
   function maybeStartTutorial(nextTab) {
-    if (TUTORIALS[nextTab] && !isTutorialSeen(nextTab)) {
+    if (TUTORIALS[nextTab]) {
       setTutTab(nextTab); setTutStep(0)
     }
   }
@@ -180,15 +180,15 @@ export default function App() {
         />
 
 
-        {/* 홈 탭 — 고정 바텀 패널 (드래그 없음) */}
+        {/* 홈 탭 — 드래그 가능한 바텀 시트 */}
         {tab === 'home' && (
-          <HomePanel>
+          <SnapSheet>
             <SearchPanel
               from={origin}
               onResults={setMarkers}
               onSelectPlace={setSelectedPlace}
             />
-          </HomePanel>
+          </SnapSheet>
         )}
 
         {/* 검색 결과 패널 (배너 검색용) */}
@@ -362,29 +362,88 @@ function Panel({ title, onClose, compactTitle, children, full, hideHeader }) {
   )
 }
 
-/* ===== HomePanel: 홈 탭 고정 바텀 패널 (드래그 없음) ===== */
-function HomePanel({ children }) {
+/* ===== SnapSheet: 위아래 드래그 가능, 수평 이동 없음 ===== */
+function SnapSheet({ children }) {
+  const SNAPS = [48, 68, 92]   // 최소 48% → 찾기 버튼 항상 보임
+  const [snap, setSnap] = useState(1)   // 기본: 68%
+  const sheetRef = useRef(null)
+  const drag = useRef({ active: false, startY: 0, startH: 0, snapIdx: 1 })
+
+  useEffect(() => { drag.current.snapIdx = snap }, [snap])
+
+  function containerH() {
+    return sheetRef.current?.parentElement?.clientHeight ?? window.innerHeight
+  }
+  function snapH(i) { return (SNAPS[i] / 100) * containerH() }
+
+  function dragStart(clientY) {
+    drag.current = { active: true, startY: clientY, startH: snapH(drag.current.snapIdx), snapIdx: drag.current.snapIdx }
+    if (sheetRef.current) sheetRef.current.style.transition = 'none'
+  }
+  function dragMove(clientY) {
+    if (!drag.current.active || !sheetRef.current) return
+    const dy = drag.current.startY - clientY
+    const min = snapH(0), max = snapH(SNAPS.length - 1)
+    const h = Math.min(Math.max(drag.current.startH + dy, min), max)
+    sheetRef.current.style.height = `${h}px`
+  }
+  function dragEnd(clientY) {
+    if (!drag.current.active) return
+    drag.current.active = false
+    const dy = drag.current.startY - clientY
+    const curH = drag.current.startH + dy
+    const pct = (curH / containerH()) * 100
+    let nearest = 0, minDist = Infinity
+    SNAPS.forEach((s, i) => { const d = Math.abs(s - pct); if (d < minDist) { minDist = d; nearest = i } })
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = 'height 300ms cubic-bezier(0.34,1.1,0.64,1)'
+    }
+    setSnap(nearest)
+  }
+
+  useEffect(() => {
+    const mm = (e) => dragMove(e.clientY)
+    const mu = (e) => dragEnd(e.clientY)
+    window.addEventListener('mousemove', mm)
+    window.addEventListener('mouseup', mu)
+    return () => { window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div
+      ref={sheetRef}
       style={{
         position: 'absolute', left: 0, right: 0, bottom: 0,
-        height: '58%',
+        height: `${SNAPS[snap]}%`,
         background: '#fff',
         borderRadius: '24px 24px 0 0',
         boxShadow: '0 -4px 24px rgba(21,35,59,0.18)',
         display: 'flex', flexDirection: 'column',
+        transition: 'height 300ms cubic-bezier(0.34,1.1,0.64,1)',
         zIndex: 20,
+        overflowX: 'hidden',   // 수평 이동 완전 차단
       }}
     >
-      {/* 장식용 바 (드래그 안 됨) */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
+      {/* 드래그 핸들 — touchAction: pan-y 로 수직 드래그만 허용 */}
+      <div
+        onMouseDown={(e) => dragStart(e.clientY)}
+        onTouchStart={(e) => { e.stopPropagation(); dragStart(e.touches[0].clientY) }}
+        onTouchMove={(e) => { e.preventDefault(); dragMove(e.touches[0].clientY) }}
+        onTouchEnd={(e) => dragEnd(e.changedTouches[0].clientY)}
+        style={{
+          padding: '14px 0 10px', flexShrink: 0,
+          display: 'flex', justifyContent: 'center',
+          cursor: 'ns-resize',
+          touchAction: 'none',   // 브라우저 기본 스크롤 차단 (드래그 핸들만)
+          userSelect: 'none',
+        }}
+      >
         <div style={{ width: 44, height: 5, borderRadius: 3, background: 'var(--border)' }} />
       </div>
-      {/* 스크롤 가능한 내용 */}
+
       <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '4px 20px',
+        flex: 1, overflowY: 'auto', overflowX: 'hidden',
+        padding: '4px 20px 16px',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
         WebkitOverflowScrolling: 'touch',
       }}>
