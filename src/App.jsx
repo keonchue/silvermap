@@ -10,6 +10,7 @@ import Tutorial from './Tutorial.jsx'
 import DirectionBanner from './DirectionBanner.jsx'
 import TransitPanel from './TransitPanel.jsx'
 import ReservePanel from './ReservePanel.jsx'
+import Compass from './Compass.jsx'
 import {
   TUTORIALS, isTutorialSeen, markTutorialSeen, resetAllTutorials,
 } from './tutorialConfig.js'
@@ -20,6 +21,13 @@ import { searchByKeyword } from './placesService.js'
 export default function App() {
   // tab: 'home' | 'directions' | 'reserve' | 'transit' | 'more'
   const [tab, setTab]                   = useState('home')
+  const [installPrompt, setInstallPrompt] = useState(null)
+
+  useEffect(() => {
+    function onBeforeInstall(e) { e.preventDefault(); setInstallPrompt(e) }
+    window.addEventListener('beforeinstallprompt', onBeforeInstall)
+    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstall)
+  }, [])
   const [markers, setMarkers]           = useState([])
   const [selectedPlace, setSelectedPlace] = useState(null)
   const [reservePlace, setReservePlace]   = useState(null)
@@ -40,7 +48,7 @@ export default function App() {
   const tutSteps = tutTab ? TUTORIALS[tutTab] : null
 
   function maybeStartTutorial(nextTab) {
-    if (TUTORIALS[nextTab]) {
+    if (TUTORIALS[nextTab] && !isTutorialSeen(nextTab)) {
       setTutTab(nextTab); setTutStep(0)
     }
   }
@@ -114,7 +122,8 @@ export default function App() {
       const places = await searchByKeyword(query, origin)
       setFlowResults(places)
       setFlowLoading(false)
-      if (tutSteps && tutStep === 0) nextTutorialStep()
+      // 튜토리얼 step 0: 검색창 누르기, step 1: 입력 후 검색 → step 1에서 진행
+      if (tutSteps && tutStep === 1) nextTutorialStep()
       return
     }
 
@@ -123,7 +132,7 @@ export default function App() {
       const places = await searchByKeyword(query, origin)
       setReserveResults(places)
       setFlowLoading(false)
-      if (tutSteps && tutStep === 0) nextTutorialStep()
+      if (tutSteps && tutStep === 1) nextTutorialStep()
       return
     }
 
@@ -164,8 +173,11 @@ export default function App() {
           routePath={routePath}
           onMarkerClick={onMarkerClick}
           onLocateRequest={() => { locate(); if (location) setCenter(location) }}
-          overlayOffset={16}
+          overlayOffset={96}
         />
+
+        {/* 빨간 방향 화살표 — 상단 가운데 */}
+        <Compass topOffset={12} />
 
 
         {/* 홈 탭 — 드래그 가능한 바텀 시트 (지도 위에 걸쳐 있음) */}
@@ -239,11 +251,17 @@ export default function App() {
         {/* 더보기 패널 */}
         {tab === 'more' && (
           <Panel title="더 보기" onClose={closePanel}>
-            <MorePanel onReplayTutorials={() => {
-              resetAllTutorials()
-              setTab('directions')
-              maybeStartTutorial('directions')
-            }} />
+            <MorePanel
+              installPrompt={installPrompt}
+              onInstall={() => {
+                if (installPrompt) { installPrompt.prompt(); setInstallPrompt(null) }
+              }}
+              onReplayTutorials={() => {
+                resetAllTutorials()
+                setTab('directions')
+                maybeStartTutorial('directions')
+              }}
+            />
           </Panel>
         )}
 
@@ -436,7 +454,9 @@ function Overlay({ onClose, children }) {
   )
 }
 
-function MorePanel({ onReplayTutorials }) {
+function MorePanel({ onReplayTutorials, installPrompt, onInstall }) {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+  const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone
   const items = [
     { label: '사용 도움말 다시 보기', desc: '튜토리얼을 처음부터 다시 보여드려요', onClick: onReplayTutorials },
     { label: '글자 크기 설정', desc: '화면 글자 크기를 조절합니다' },
@@ -445,6 +465,36 @@ function MorePanel({ onReplayTutorials }) {
   ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* 홈 화면 추가 버튼 */}
+      {installPrompt && (
+        <button
+          onClick={onInstall}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '18px 18px', background: '#1957c8',
+            border: 'none', borderRadius: 'var(--radius)',
+            textAlign: 'left', color: '#fff',
+          }}
+        >
+          <span style={{ fontSize: 36 }}>📲</span>
+          <div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>홈 화면에 추가하기</div>
+            <div style={{ fontSize: 'var(--fs-sm)', opacity: 0.85 }}>앱처럼 바로 실행할 수 있어요</div>
+          </div>
+        </button>
+      )}
+      {isIOS && !installPrompt && !isStandalone && (
+        <div style={{
+          padding: '16px 18px', background: '#e8f0ff',
+          border: '2px solid #1957c8', borderRadius: 'var(--radius)',
+          fontSize: 'var(--fs-sm)', color: 'var(--text)', lineHeight: 1.8,
+        }}>
+          <strong style={{ fontSize: 'var(--fs-base)', display: 'block', marginBottom: 6 }}>📲 홈 화면에 앱으로 추가하는 방법</strong>
+          1. 하단의 <strong>공유 버튼(□↑)</strong>을 누르세요<br/>
+          2. 아래로 내려서 <strong>"홈 화면에 추가"</strong>를 누르세요<br/>
+          3. 오른쪽 위 <strong>"추가"</strong>를 누르세요
+        </div>
+      )}
       {items.map(({ label, desc, onClick }) => (
         <button
           key={label}

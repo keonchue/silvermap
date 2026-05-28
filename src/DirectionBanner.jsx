@@ -1,30 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { MicIcon, SearchIcon } from './icons.jsx'
 
 export default function DirectionBanner({ onSearch, placeholder = '검색하기' }) {
-  const [heading, setHeading]   = useState(0)
   const [query, setQuery]       = useState('')
   const [listening, setListening] = useState(false)
   const recRef = useRef(null)
-
-  useEffect(() => {
-    function onOrient(e) {
-      const h =
-        typeof e.webkitCompassHeading === 'number'
-          ? e.webkitCompassHeading
-          : e.alpha != null ? 360 - e.alpha : null
-      if (h != null) setHeading(Math.round(h))
-    }
-    window.addEventListener('deviceorientation', onOrient, true)
-    return () => window.removeEventListener('deviceorientation', onOrient, true)
-  }, [])
-
-  async function requestOrientPermission() {
-    try {
-      if (typeof DeviceOrientationEvent?.requestPermission === 'function')
-        await DeviceOrientationEvent.requestPermission()
-    } catch {}
-  }
 
   function handleSearch(e) {
     e.preventDefault()
@@ -59,28 +39,10 @@ export default function DirectionBanner({ onSearch, placeholder = '검색하기'
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           background: 'var(--surface)', border: '2px solid var(--border)',
-          borderRadius: 30, padding: '0 14px', minHeight: 52,
+          borderRadius: 30, padding: '0 14px', minHeight: 56,
         }}>
-          {/* 방향 화살표 (소형) */}
-          <button
-            type="button"
-            onClick={requestOrientPermission}
-            aria-label="내가 바라보는 방향"
-            style={{
-              flexShrink: 0, padding: 4,
-              transform: `rotate(${-heading}deg)`,
-              transition: 'transform 220ms ease-out',
-              color: '#dc2626',
-              display: 'flex', alignItems: 'center',
-            }}
-          >
-            <svg viewBox="0 0 24 34" width="20" height="28" aria-hidden="true">
-              <path d="M12 2 L21 30 L12 23 L3 30 Z" fill="currentColor" />
-            </svg>
-          </button>
-
           {/* 검색 아이콘 */}
-          <SearchIcon size={20} style={{ flexShrink: 0, color: 'var(--text-soft)' }} />
+          <SearchIcon size={22} style={{ flexShrink: 0, color: 'var(--text-soft)' }} />
 
           {/* 입력창 */}
           <input
