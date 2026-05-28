@@ -12,18 +12,18 @@ export default defineConfig({
       name: 'pwa-manifest',
       closeBundle() {
         const manifest = {
-          name: '큰지도 - 어디든 쉽게',
-          short_name: '큰지도',
-          description: '어르신을 위한 큰 글자 지도 앱',
+          name: 'SilverMap',
+          short_name: 'SilverMap',
+          description: '쉽고 편한 길 안내',
           start_url: base,
           scope: base,
           display: 'standalone',
           orientation: 'portrait',
-          background_color: '#1857c9',
+          background_color: '#ffffff',
           theme_color: '#1857c9',
           lang: 'ko',
           icons: [
-            { src: `${base}icon.svg`, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+            { src: `${base}icon.png`, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
           ],
         }
         fs.writeFileSync(
