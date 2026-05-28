@@ -225,6 +225,12 @@ input {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* 상단 빨간 화살표 배너 bob 애니메이션 */
+@keyframes arrow-bob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-5px) scale(1.08); }
+}
+
 /* 화살표 래퍼: bob + scale 애니메이션 */
 .dir-banner-arrow-wrap {
   position: relative;
@@ -373,8 +379,9 @@ input {
   position: fixed;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  max-width: min(340px, 92vw);
+  gap: 8px;
+  /* width 필수: max-width만 있으면 flex-shrink로 body가 1px까지 줄어듦 */
+  width: min(76vw, 320px);
   pointer-events: auto;
   animation: fadeIn 220ms ease-out;
 }
@@ -388,10 +395,12 @@ input {
   background: #fff;
   border: 2px solid var(--primary);
   border-radius: 16px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-  min-width: 0;
+  /* flex-item이 bubble 너비에서 guide 아이콘 크기를 뺀 만큼 채움 */
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 .tut-bubble-body p {
   font-size: var(--fs-base);
@@ -409,10 +418,12 @@ input {
 }
 .tut-skip, .tut-next {
   min-height: 44px;
-  padding: 0 16px;
+  padding: 0 14px;
   border-radius: 22px;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
+  white-space: nowrap;  /* 버튼 텍스트 줄바꿈 방지 */
+  flex-shrink: 0;
 }
 .tut-skip {
   background: transparent;

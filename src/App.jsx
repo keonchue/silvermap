@@ -10,7 +10,7 @@ import Tutorial from './Tutorial.jsx'
 import DirectionBanner from './DirectionBanner.jsx'
 import TransitPanel from './TransitPanel.jsx'
 import ReservePanel from './ReservePanel.jsx'
-import Compass from './Compass.jsx'
+import ArrowBanner from './ArrowBanner.jsx'
 import {
   TUTORIALS, isTutorialSeen, markTutorialSeen, resetAllTutorials,
 } from './tutorialConfig.js'
@@ -151,7 +151,10 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
-      {/* ① 최상단: 검색창 (대중교통 탭에서는 숨김 — 탭 내 검색창 사용) */}
+      {/* ① 최상단: 빨간 방향 화살표 배너 (항상 표시) */}
+      <ArrowBanner />
+
+      {/* ② 검색창 (대중교통 탭에서는 숨김 — 탭 내 검색창 사용) */}
       {tab !== 'transit' && (
         <DirectionBanner
           onSearch={onBannerSearch}
@@ -163,7 +166,7 @@ export default function App() {
         />
       )}
 
-      {/* ② 중앙: 지도 영역 */}
+      {/* ③ 중앙: 지도 영역 */}
       <main style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
         {/* 카카오 지도 */}
         <MapCanvas
@@ -173,11 +176,8 @@ export default function App() {
           routePath={routePath}
           onMarkerClick={onMarkerClick}
           onLocateRequest={() => { locate(); if (location) setCenter(location) }}
-          overlayOffset={96}
+          overlayOffset={16}
         />
-
-        {/* 빨간 방향 화살표 — 상단 가운데 */}
-        <Compass topOffset={12} />
 
 
         {/* 홈 탭 — 드래그 가능한 바텀 시트 (지도 위에 걸쳐 있음) */}
@@ -364,8 +364,8 @@ function Panel({ title, onClose, compactTitle, children, full, hideHeader }) {
 
 /* ===== SnapSheet: 마우스·터치 드래그로 높이 조절, 놓으면 가장 가까운 스냅 ===== */
 function SnapSheet({ children }) {
-  const SNAPS = [28, 58, 88] // 컨테이너 높이 대비 %
-  const [snap, setSnap] = useState(1)
+  const SNAPS = [30, 60, 90] // 컨테이너 높이 대비 %
+  const [snap, setSnap] = useState(0) // 기본: 30% (지도 더 넓게 보임)
   const sheetRef = useRef(null)
   const drag     = useRef({ active: false, startY: 0, startH: 0, snapIdx: 1 })
 
@@ -483,16 +483,28 @@ function MorePanel({ onReplayTutorials, installPrompt, onInstall }) {
           </div>
         </button>
       )}
-      {isIOS && !installPrompt && !isStandalone && (
+      {/* 공통: 항상 표시되는 도움말 */}
+      {!isStandalone && (
         <div style={{
-          padding: '16px 18px', background: '#e8f0ff',
-          border: '2px solid #1957c8', borderRadius: 'var(--radius)',
-          fontSize: 'var(--fs-sm)', color: 'var(--text)', lineHeight: 1.8,
+          padding: '14px 18px', background: '#e8f4e8',
+          border: '2px solid #1f7a3d', borderRadius: 'var(--radius)',
+          fontSize: 'var(--fs-sm)', color: '#1a4d2a', lineHeight: 1.7,
+          display: 'flex', alignItems: 'flex-start', gap: 10,
         }}>
-          <strong style={{ fontSize: 'var(--fs-base)', display: 'block', marginBottom: 6 }}>📲 홈 화면에 앱으로 추가하는 방법</strong>
-          1. 하단의 <strong>공유 버튼(□↑)</strong>을 누르세요<br/>
-          2. 아래로 내려서 <strong>"홈 화면에 추가"</strong>를 누르세요<br/>
-          3. 오른쪽 위 <strong>"추가"</strong>를 누르세요
+          <span style={{ fontSize: 28, flexShrink: 0 }}>📱</span>
+          <div>
+            <strong style={{ fontSize: 'var(--fs-base)', display: 'block', marginBottom: 4 }}>
+              홈 화면에 추가하면 앱처럼 사용할 수 있습니다!
+            </strong>
+            {isIOS ? (
+              <span>
+                Safari 하단 <strong>공유(□↑)</strong> 버튼 →<br/>
+                <strong>"홈 화면에 추가"</strong> → <strong>"추가"</strong>
+              </span>
+            ) : (
+              <span>브라우저 메뉴 → <strong>"홈 화면에 추가"</strong> 선택</span>
+            )}
+          </div>
         </div>
       )}
       {items.map(({ label, desc, onClick }) => (

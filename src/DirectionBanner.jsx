@@ -29,7 +29,7 @@ export default function DirectionBanner({ onSearch, placeholder = '검색하기'
     <div
       style={{
         background: '#fff',
-        padding: 'max(10px, env(safe-area-inset-top)) 12px 10px',
+        padding: '8px 12px 10px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.13)',
         zIndex: 15,
         flexShrink: 0,
