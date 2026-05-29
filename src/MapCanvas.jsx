@@ -10,10 +10,13 @@ const USER_CONE_ID = 'user-loc-cone'
 
 /* ===== 실제 카카오 지도 ===== */
 function RealMap({ center, userLocation, markers, routePath, onMarkerClick, onLocateRequest, overlayOffset }) {
-  const boxRef   = useRef(null)
-  const mapRef   = useRef(null)
-  const objsRef  = useRef([])
+  const boxRef      = useRef(null)
+  const mapRef      = useRef(null)
+  const objsRef     = useRef([])
+  const centerRef   = useRef(center)
   const [failed, setFailed] = useState(false)
+
+  useEffect(() => { centerRef.current = center }, [center])
 
   // 방향(heading) — deviceorientation으로 실시간 갱신
   const [heading, setHeading]   = useState(0)
@@ -54,8 +57,9 @@ function RealMap({ center, userLocation, markers, routePath, onMarkerClick, onLo
     loadKakaoSdk()
       .then((kakao) => {
         if (!alive || !boxRef.current) return
+        const c = centerRef.current
         mapRef.current = new kakao.maps.Map(boxRef.current, {
-          center: new kakao.maps.LatLng(center.lat, center.lng),
+          center: new kakao.maps.LatLng(c.lat, c.lng),
           level: 4,
         })
       })

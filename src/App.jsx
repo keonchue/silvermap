@@ -392,8 +392,8 @@ function Panel({ title, onClose, compactTitle, children, full, hideHeader }) {
 
 /* ===== SnapSheet: 위아래 드래그 가능, 수평 이동 없음 ===== */
 function SnapSheet({ children }) {
-  const SNAPS = [48, 68, 92]   // 최소 48% → 찾기 버튼 항상 보임
-  const [snap, setSnap] = useState(1)   // 기본: 68%
+  const SNAPS = [24, 55, 90]
+  const [snap, setSnap] = useState(1)   // 기본: 55%
   const sheetRef = useRef(null)
   const drag = useRef({ active: false, startY: 0, startH: 0, snapIdx: 1 })
 
