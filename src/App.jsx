@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import SplashScreen from './SplashScreen.jsx'
 import MapCanvas from './MapCanvas.jsx'
 import BottomNav from './BottomNav.jsx'
 import SearchPanel from './SearchPanel.jsx'
@@ -19,6 +20,8 @@ import { CloseIcon } from './icons.jsx'
 import { searchByKeyword } from './placesService.js'
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true)
+
   // tab: 'home' | 'directions' | 'reserve' | 'transit' | 'more'
   const [tab, setTab]                   = useState('home')
   const [installPrompt, setInstallPrompt] = useState(null)
@@ -150,6 +153,8 @@ export default function App() {
   }
 
   return (
+    <>
+    {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: 'var(--bg)' }}>
       {/* ① 최상단: 빨간 방향 화살표 배너 (항상 표시) */}
       <ArrowBanner />
@@ -323,6 +328,7 @@ export default function App() {
         />
       )}
     </div>
+    </>
   )
 }
 

@@ -1,20 +1,26 @@
 {
-  "name": "큰지도 - 어디든 쉽게",
-  "short_name": "큰지도",
+  "name": "SilverMap - 쉽고 편한 길 안내",
+  "short_name": "SilverMap",
   "description": "어르신을 위한 큰 글자 지도 앱",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1857c9",
-  "theme_color": "#1857c9",
+  "background_color": "#d6e8f7",
+  "theme_color": "#1957c8",
   "lang": "ko",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
