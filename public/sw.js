@@ -1,5 +1,5 @@
 // 큰지도 서비스워커 — PWA 홈 화면 추가 지원용
-const CACHE = 'silvermap-v6'
+const CACHE = 'silvermap-__BUILD_TIME__'
 
 function getBase() {
   return new URL(self.registration.scope).pathname  // '/' or '/silvermap/'
