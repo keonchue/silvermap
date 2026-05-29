@@ -17,7 +17,7 @@ export default function SplashScreen({ onDone }) {
       transition: 'opacity 400ms ease-out',
     }}>
       <img
-        src="/splash.png"
+        src={`${import.meta.env.BASE_URL}splash.png`}
         alt="SilverMap"
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
