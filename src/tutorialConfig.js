@@ -36,15 +36,15 @@ export const TUTORIALS = {
   ],
   reserve: [
     {
-      id: 'home-search-tap',
-      target: '[data-tutorial="home-search"]',
-      message: '맨 위에 있는 검색창을\n손가락으로 한 번 눌러주세요.',
+      id: 'reserve-search-tap',
+      target: '[data-tutorial="reserve-search"]',
+      message: '아래 검색창을\n손가락으로 한 번 눌러주세요.',
       position: 'below',
     },
     {
-      id: 'home-search-type',
-      target: '[data-tutorial="home-search"]',
-      message: '예약하실 장소 이름을 입력해주세요.\n예: 강남병원, 국민은행\n\n입력 후 키보드의 검색 버튼을\n눌러주세요.',
+      id: 'reserve-search-type',
+      target: '[data-tutorial="reserve-search"]',
+      message: '예약하실 장소 이름을 입력해주세요.\n예: 강남병원, 국민은행\n\n입력 후 검색 버튼을 눌러주세요.',
       position: 'below',
       clickAdvances: false,
     },
@@ -88,7 +88,7 @@ export const TUTORIALS = {
   ],
 }
 
-export const TUTORIAL_VERSION = 'v6'
+export const TUTORIAL_VERSION = 'v7'
 const SEEN_KEY = (tab) => `silvermap.tut.${TUTORIAL_VERSION}.${tab}`
 
 export function isTutorialSeen(tab) {

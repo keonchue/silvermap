@@ -466,7 +466,7 @@ function SnapSheet({ children }) {
       </div>
 
       <div style={{
-        flex: 1, overflowY: 'auto', overflowX: 'hidden',
+        flex: 1, overflowY: 'auto',
         padding: '4px 20px 16px',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
         WebkitOverflowScrolling: 'touch',

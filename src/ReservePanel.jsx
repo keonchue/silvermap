@@ -60,18 +60,15 @@ export default function ReservePanel({ onTutAdvance, initialPlace }) {
     e?.preventDefault()
     const q = query.trim()
     if (!q) { setResults(PLACES_MOCK); return }
-    // 카카오 로컬 API 키 없을 때 목업 필터
     setResults(
       PLACES_MOCK.filter(
         (p) => p.name.includes(q) || p.address.includes(q)
       )
     )
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[ReservePanel] 카카오 로컬 API 미연동 — 목업 데이터 사용 중')
-    }
+    onTutAdvance?.()
   }
 
-  function selectPlace(p)   { setPlace(p);   setStep(1) }
+  function selectPlace(p) { setPlace(p); setStep(1); onTutAdvance?.() }
   function selectProgram(pr){ setProgram(pr); setStep(2) }
 
   function goPayment() {
