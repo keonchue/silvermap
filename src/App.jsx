@@ -159,13 +159,12 @@ export default function App() {
       {/* ① 최상단: 빨간 방향 화살표 배너 (항상 표시) */}
       <ArrowBanner />
 
-      {/* ② 검색창 (홈·대중교통 탭에서는 숨김) */}
-      {tab !== 'transit' && tab !== 'home' && (
+      {/* ② 검색창 (홈·대중교통·예약 탭에서는 숨김) */}
+      {tab !== 'transit' && tab !== 'home' && tab !== 'reserve' && (
         <DirectionBanner
           onSearch={onBannerSearch}
           placeholder={
             tab === 'directions' ? '목적지를 검색하세요' :
-            tab === 'reserve'    ? '예약할 장소를 검색하세요' :
             '검색하기'
           }
         />
@@ -223,16 +222,13 @@ export default function App() {
           />
         )}
 
-        {/* 예약하기 — 검색 결과 오버레이 (길찾기와 동일한 UX) */}
+        {/* 예약하기 — 바텀 시트로 바로 표시 (지도 검색 불필요) */}
         {tab === 'reserve' && !reserveSelected && (
-          <ReserveFlow
-            results={reserveResults}
-            loading={flowLoading}
-            onSelectPlace={(p) => { setReserveSelected(p); setReserveResults([]) }}
-            onTutAdvance={nextTutorialStep}
-          />
+          <SnapSheet>
+            <ReservePanel onTutAdvance={nextTutorialStep} />
+          </SnapSheet>
         )}
-        {/* 장소 선택 후: 예약 마법사 전체 화면 */}
+        {/* PlaceSheet/지도에서 장소 선택 후: 전체 화면 예약 마법사 */}
         {tab === 'reserve' && reserveSelected && (
           <Panel title={reserveSelected.name} onClose={() => setReserveSelected(null)} full compactTitle>
             <ReservePanel initialPlace={reserveSelected} onTutAdvance={nextTutorialStep} />

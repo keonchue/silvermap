@@ -180,10 +180,11 @@ input {
 }
 .panel-title { font-size: var(--fs-xl); font-weight: 900; }
 .panel-body {
+  flex: 1;
+  min-height: 0;
   padding: 16px 20px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* 하단 safe area 여백 */
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
