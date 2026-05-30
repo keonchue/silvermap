@@ -180,7 +180,7 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
           {/* Bottom panel */}
           <div style={{
             position: 'absolute', left: 0, right: 0, bottom: 0,
-            maxHeight: '88%',
+            maxHeight: '92%',
             background: 'var(--card)',
             borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
             boxShadow: 'var(--shadow-lg)',
@@ -193,8 +193,15 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
               <div style={{ width: 56, height: 5, borderRadius: 99, background: 'var(--border)' }} />
             </div>
 
-            {/* OD display — 고정 */}
-            <div className="route-od" style={{ flexShrink: 0 }}>
+            {/* 스크롤 가능한 영역 — OD·모드·경로 상세 전부 포함 */}
+            <div style={{
+              flex: 1, minHeight: 0,
+              overflowY: 'auto', overflowX: 'hidden',
+              WebkitOverflowScrolling: 'touch',
+            }}>
+
+            {/* OD display */}
+            <div className="route-od">
               <div className="od-row">
                 <span className="od-dot-me" />
                 <span className="od-label">출발</span>
@@ -208,8 +215,8 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
               </div>
             </div>
 
-            {/* Mode selector — 고정 */}
-            <div className="mode-grid" style={{ flexShrink: 0 }}>
+            {/* Mode selector */}
+            <div className="mode-grid">
               {MODES.map(({ id, label }) => {
                 const prefDef = ROUTE_PREFS.find(p => p.id === routePref) || ROUTE_PREFS[0]
                 const timeStr = id === 'walk'
@@ -230,13 +237,6 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
                 )
               })}
             </div>
-
-            {/* 스크롤 가능한 중간 영역 */}
-            <div style={{
-              flex: 1, minHeight: 0,
-              overflowY: 'auto', overflowX: 'hidden',
-              WebkitOverflowScrolling: 'touch',
-            }}>
 
             {/* Route details */}
             {!routeLoading && (
