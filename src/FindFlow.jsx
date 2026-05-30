@@ -20,9 +20,40 @@ const MODES = [
   { id: 'car',     label: '🚗 자동차' },
 ]
 
+const ROUTE_PREFS = [
+  {
+    id: 'comfort',
+    emoji: '🌿',
+    label: '걷기 편한 길',
+    desc: '계단·오르막이 없는 완만하고 평탄한 길로 안내해요',
+    tags: ['계단 없음', '평탄한 길', '그늘 많음'],
+    factor: 1.15,
+    navMsg: '계단 없는 걷기 편한 길로 안내합니다.',
+  },
+  {
+    id: 'quiet',
+    emoji: '🤫',
+    label: '조용한 길',
+    desc: '공원·골목길, 차량이 적고 한적한 길로 안내해요',
+    tags: ['공원 경유', '차량 적음', '조용한 골목'],
+    factor: 1.20,
+    navMsg: '조용한 공원길과 골목길로 안내합니다.',
+  },
+  {
+    id: 'fast',
+    emoji: '⚡',
+    label: '빠른 길',
+    desc: '가장 빠르고 짧은 최단 경로로 안내해요',
+    tags: ['최단 거리', '주요 도로'],
+    factor: 1.0,
+    navMsg: '가장 빠른 최단 경로로 안내합니다.',
+  },
+]
+
 export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, initialMode = 'walk', results = [], loading = false }) {
   const [dest, setDest]         = useState(initialDest || null)
   const [mode, setMode]         = useState(initialMode)
+  const [routePref, setRoutePref] = useState('comfort')
   const [walkInfo, setWalkInfo] = useState(null)  // { meters, mins }
   const [carInfo, setCarInfo]   = useState(null)  // { mins }
   const [transitInfo, setTransitInfo] = useState(null)  // { duration, fare, legs }
@@ -84,9 +115,11 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
 
   function startNav() {
     if (!dest) return
+    const prefDef = ROUTE_PREFS.find(p => p.id === routePref) || ROUTE_PREFS[0]
     let msg = `길 안내를 시작합니다. ${dest.name}까지 이동합니다. `
     if (mode === 'walk' && walkInfo) {
-      msg += `도보 약 ${walkInfo.mins}분, ${fmtDist(walkInfo.meters)} 거리입니다.`
+      const adjMins = Math.ceil(walkInfo.mins * prefDef.factor)
+      msg += `${prefDef.navMsg} 도보 약 ${adjMins}분 소요됩니다.`
     } else if (mode === 'car' && carInfo) {
       msg += `자동차로 약 ${carInfo.mins}분 소요됩니다.`
     } else if (mode === 'transit' && transitInfo) {
@@ -176,9 +209,11 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
             {/* Mode selector */}
             <div className="mode-grid">
               {MODES.map(({ id, label }) => {
-                const timeStr = id === 'walk' ? (walkInfo ? `${walkInfo.mins}분` : '—')
-                              : id === 'car' ? (carInfo ? `${carInfo.mins}분` : '—')
-                              : (transitInfo ? `${transitInfo.duration}분` : '—')
+                const prefDef = ROUTE_PREFS.find(p => p.id === routePref) || ROUTE_PREFS[0]
+                const timeStr = id === 'walk'
+                  ? (walkInfo ? `${Math.ceil(walkInfo.mins * prefDef.factor)}분` : '—')
+                  : id === 'car' ? (carInfo ? `${carInfo.mins}분` : '—')
+                  : (transitInfo ? `${transitInfo.duration}분` : '—')
                 const icon = id === 'walk' ? '🚶' : id === 'transit' ? '🚌' : '🚗'
                 return (
                   <button
@@ -197,35 +232,90 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
             {/* Route details */}
             {!routeLoading && (
               <div className="route-card">
-                {mode === 'walk' && walkInfo && (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-                      <span className="rc-time">{walkInfo.mins}분</span>
-                      <span className="rc-arrive">도보 도착</span>
-                      <span className="rc-fare">무료</span>
-                    </div>
-                    <div className="steps">
-                      <div className="step">
-                        <div className="s-rail">
-                          <span className="s-badge" style={{ background: 'var(--text-soft)' }}>🚶</span>
-                          <span className="s-stem" />
+                {mode === 'walk' && walkInfo && (() => {
+                  const prefDef = ROUTE_PREFS.find(p => p.id === routePref) || ROUTE_PREFS[0]
+                  const adjMins = Math.ceil(walkInfo.mins * prefDef.factor)
+                  const adjMeters = Math.round(walkInfo.meters * prefDef.factor * 0.98)
+                  return (
+                    <>
+                      {/* 경로 유형 선택 */}
+                      <div style={{ marginBottom: 18 }}>
+                        <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-soft)', marginBottom: 10 }}>
+                          어떤 길로 가실까요?
                         </div>
-                        <div className="s-body">
-                          <div className="s-act">도보 {walkInfo.mins}분</div>
-                          <div className="s-det">{fmtDist(walkInfo.meters)} 거리</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                          {ROUTE_PREFS.map((pref) => (
+                            <button
+                              key={pref.id}
+                              onClick={() => setRoutePref(pref.id)}
+                              style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                gap: 4, padding: '12px 6px',
+                                borderRadius: 14, minHeight: 80,
+                                border: routePref === pref.id ? '3px solid var(--primary)' : '2px solid var(--border)',
+                                background: routePref === pref.id ? 'var(--primary-50)' : 'var(--bg)',
+                                color: routePref === pref.id ? 'var(--primary)' : 'var(--text)',
+                                transition: 'all 120ms',
+                              }}
+                            >
+                              <span style={{ fontSize: 26 }}>{pref.emoji}</span>
+                              <span style={{ fontSize: 14, fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
+                                {pref.label}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        {/* 선택된 경로 설명 */}
+                        <div style={{
+                          padding: '10px 14px',
+                          background: 'var(--surface)', borderRadius: 12,
+                          fontSize: 16, color: 'var(--text-soft)', lineHeight: 1.5,
+                          marginBottom: 8,
+                        }}>
+                          {prefDef.desc}
+                        </div>
+                        {/* 특성 태그 */}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {prefDef.tags.map(tag => (
+                            <span key={tag} style={{
+                              padding: '5px 13px', borderRadius: 99,
+                              background: '#e8f4e8', color: '#1a7a3d',
+                              fontSize: 15, fontWeight: 700,
+                            }}>
+                              ✓ {tag}
+                            </span>
+                          ))}
                         </div>
                       </div>
-                      <div className="step">
-                        <div className="s-rail">
-                          <span className="s-badge" style={{ background: 'var(--success)' }}>🏁</span>
+
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+                        <span className="rc-time">{adjMins}분</span>
+                        <span className="rc-arrive">도보 도착</span>
+                        <span className="rc-fare">무료</span>
+                      </div>
+                      <div className="steps">
+                        <div className="step">
+                          <div className="s-rail">
+                            <span className="s-badge" style={{ background: 'var(--text-soft)' }}>🚶</span>
+                            <span className="s-stem" />
+                          </div>
+                          <div className="s-body">
+                            <div className="s-act">도보 {adjMins}분</div>
+                            <div className="s-det">{fmtDist(adjMeters)} 거리</div>
+                          </div>
                         </div>
-                        <div className="s-body">
-                          <div className="s-act">{dest.name} 도착</div>
+                        <div className="step">
+                          <div className="s-rail">
+                            <span className="s-badge" style={{ background: 'var(--success)' }}>🏁</span>
+                          </div>
+                          <div className="s-body">
+                            <div className="s-act">{dest.name} 도착</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )
+                })()}
                 {mode === 'car' && carInfo && (
                   <>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>

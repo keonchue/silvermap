@@ -332,45 +332,248 @@ function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }
 
 function PaymentStep({ place, program, date, people, onPay }) {
   const total = program.price * people
+  const [method, setMethod]     = useState(null)
+  const [cardNum, setCardNum]   = useState('')
+  const [cardExp, setCardExp]   = useState('')
+  const [cardCvc, setCardCvc]   = useState('')
+  const [cardName, setCardName] = useState('')
+
+  function fmtCardNum(v) {
+    const digits = v.replace(/\D/g, '').slice(0, 16)
+    return digits.replace(/(.{4})/g, '$1 ').trim()
+  }
+  function fmtExp(v) {
+    const digits = v.replace(/\D/g, '').slice(0, 4)
+    if (digits.length >= 3) return digits.slice(0, 2) + ' / ' + digits.slice(2)
+    return digits
+  }
+
+  const canPay = method === 'free'
+    || method === 'kakaopay'
+    || method === 'tosspay'
+    || method === 'onsite'
+    || (method === 'card' && cardNum.replace(/\s/g,'').length === 16 && cardExp.length >= 5 && cardCvc.length >= 3)
+
+  if (total === 0) {
+    return (
+      <>
+        <p style={{ fontSize: 'var(--fs-xl)', fontWeight: 900 }}>예약 정보 확인</p>
+        <div style={{
+          background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '18px',
+          display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 4,
+        }}>
+          <PayRow label="장소"     value={place.name}   />
+          <PayRow label="프로그램" value={program.name} />
+          <PayRow label="날짜"     value={date}         />
+          <PayRow label="인원"     value={`${people}명`}/>
+          <hr style={{ margin: '12px 0', border: 'none', borderTop: '2px solid var(--border)' }} />
+          <PayRow label="결제 금액" value="무료" bold />
+        </div>
+        <button onClick={onPay} className="btn btn-primary" style={{ fontSize: 'var(--fs-lg)' }}>
+          무료 예약 완료
+        </button>
+      </>
+    )
+  }
 
   return (
     <>
-      <p style={{ fontSize: 'var(--fs-xl)', fontWeight: 900 }}>결제 정보 확인</p>
+      <p style={{ fontSize: 'var(--fs-xl)', fontWeight: 900 }}>결제하기</p>
 
+      {/* 예약 요약 */}
       <div style={{
-        background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '18px',
+        background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '16px 18px',
         display: 'flex', flexDirection: 'column', gap: 4,
       }}>
-        <PayRow label="장소"     value={place.name}    />
-        <PayRow label="프로그램" value={program.name}  />
-        <PayRow label="날짜"     value={date}          />
-        <PayRow label="인원"     value={`${people}명`} />
-        <hr style={{ margin: '12px 0', border: 'none', borderTop: '2px solid var(--border)' }} />
-        <PayRow
-          label="결제 금액"
-          value={total === 0 ? '무료' : `${total.toLocaleString()}원`}
-          bold
-        />
+        <PayRow label="장소"     value={place.name}   />
+        <PayRow label="프로그램" value={program.name} />
+        <PayRow label="날짜"     value={date}         />
+        <PayRow label="인원"     value={`${people}명`}/>
+        <hr style={{ margin: '10px 0', border: 'none', borderTop: '2px solid var(--border)' }} />
+        <PayRow label="결제 금액" value={`${total.toLocaleString()}원`} bold />
       </div>
 
-      {total > 0 && (
+      {/* 결제 수단 */}
+      <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, marginTop: 4 }}>결제 수단 선택</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* 카카오페이 */}
+        <button
+          onClick={() => setMethod('kakaopay')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '16px 18px', borderRadius: 'var(--radius)',
+            border: method === 'kakaopay' ? '3px solid #3c1e1e' : '2px solid var(--border)',
+            background: method === 'kakaopay' ? '#fee500' : '#fff',
+            transition: 'all 120ms', textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: 32, lineHeight: 1 }}>💛</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: '#3c1e1e' }}>카카오페이</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: '#7a5a00', marginTop: 2 }}>카카오 계정으로 간편 결제</div>
+          </div>
+          {method === 'kakaopay' && <span style={{ fontSize: 22, color: '#3c1e1e' }}>✓</span>}
+        </button>
+
+        {/* 토스페이 */}
+        <button
+          onClick={() => setMethod('tosspay')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '16px 18px', borderRadius: 'var(--radius)',
+            border: method === 'tosspay' ? '3px solid #0064ff' : '2px solid var(--border)',
+            background: method === 'tosspay' ? '#e8f0ff' : '#fff',
+            transition: 'all 120ms', textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: 32, lineHeight: 1 }}>💙</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: '#0064ff' }}>토스페이</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: '#3a5fa8', marginTop: 2 }}>토스 앱으로 간편 결제</div>
+          </div>
+          {method === 'tosspay' && <span style={{ fontSize: 22, color: '#0064ff' }}>✓</span>}
+        </button>
+
+        {/* 신용·체크카드 */}
         <div style={{
-          background: '#f0f7ff', border: '2px solid var(--primary)',
-          borderRadius: 'var(--radius)', padding: '14px 18px',
-          fontSize: 'var(--fs-sm)', lineHeight: 1.7,
+          borderRadius: 'var(--radius)',
+          border: method === 'card' ? '3px solid var(--primary)' : '2px solid var(--border)',
+          background: '#fff', overflow: 'hidden', transition: 'border 120ms',
         }}>
-          카드 번호 등 민감 정보는 결제 위젯에서 안전하게 처리됩니다.
-          앱이 직접 카드 정보를 저장하지 않습니다.
+          <button
+            onClick={() => setMethod(method === 'card' ? null : 'card')}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+              padding: '16px 18px', background: 'transparent', textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: 32, lineHeight: 1 }}>💳</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: 'var(--text)' }}>신용·체크카드</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 2 }}>국내외 모든 카드 사용 가능</div>
+            </div>
+            <span style={{ fontSize: 20, color: 'var(--text-soft)' }}>{method === 'card' ? '▲' : '▼'}</span>
+          </button>
+
+          {method === 'card' && (
+            <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
+                  카드 번호
+                </label>
+                <input
+                  type="tel" inputMode="numeric"
+                  placeholder="1234 5678 9012 3456"
+                  value={cardNum}
+                  onChange={e => setCardNum(fmtCardNum(e.target.value))}
+                  style={{
+                    width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
+                    border: '2px solid var(--border)', borderRadius: 14,
+                    background: 'var(--surface)', letterSpacing: 2,
+                  }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
+                    유효기간
+                  </label>
+                  <input
+                    type="tel" inputMode="numeric"
+                    placeholder="MM / YY"
+                    value={cardExp}
+                    onChange={e => setCardExp(fmtExp(e.target.value))}
+                    style={{
+                      width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
+                      border: '2px solid var(--border)', borderRadius: 14,
+                      background: 'var(--surface)',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
+                    CVC
+                  </label>
+                  <input
+                    type="tel" inputMode="numeric"
+                    placeholder="123"
+                    maxLength={4}
+                    value={cardCvc}
+                    onChange={e => setCardCvc(e.target.value.replace(/\D/g,'').slice(0,4))}
+                    style={{
+                      width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
+                      border: '2px solid var(--border)', borderRadius: 14,
+                      background: 'var(--surface)',
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
+                  카드 소유자 이름
+                </label>
+                <input
+                  type="text"
+                  placeholder="홍길동"
+                  value={cardName}
+                  onChange={e => setCardName(e.target.value)}
+                  style={{
+                    width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
+                    border: '2px solid var(--border)', borderRadius: 14,
+                    background: 'var(--surface)',
+                  }}
+                />
+              </div>
+              <div style={{
+                background: '#f0f7ff', border: '2px solid var(--primary)',
+                borderRadius: 12, padding: '10px 14px',
+                fontSize: 15, color: 'var(--text-soft)', lineHeight: 1.6,
+              }}>
+                🔒 카드 정보는 암호화되어 안전하게 처리됩니다
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* 현장 결제 */}
+        <button
+          onClick={() => setMethod('onsite')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '16px 18px', borderRadius: 'var(--radius)',
+            border: method === 'onsite' ? '3px solid var(--success)' : '2px solid var(--border)',
+            background: method === 'onsite' ? '#e8f5ed' : '#fff',
+            transition: 'all 120ms', textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: 32, lineHeight: 1 }}>💵</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: 'var(--text)' }}>현장에서 결제</div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 2 }}>방문 후 현금 또는 카드로 결제</div>
+          </div>
+          {method === 'onsite' && <span style={{ fontSize: 22, color: 'var(--success)' }}>✓</span>}
+        </button>
+      </div>
 
       <button
         onClick={onPay}
         className="btn btn-primary"
-        style={{ fontSize: 'var(--fs-lg)' }}
+        disabled={!canPay}
+        style={{ fontSize: 'var(--fs-lg)', marginTop: 4, opacity: canPay ? 1 : 0.45 }}
       >
-        {total === 0 ? '무료 예약 완료' : '결제하기'}
+        {method === 'kakaopay' ? `💛 카카오페이로 ${total.toLocaleString()}원 결제`
+          : method === 'tosspay' ? `💙 토스페이로 ${total.toLocaleString()}원 결제`
+          : method === 'card' ? `💳 카드로 ${total.toLocaleString()}원 결제`
+          : method === 'onsite' ? `예약 완료 (현장 결제)`
+          : '결제 수단을 선택해주세요'}
       </button>
+      {!canPay && method && (
+        <p style={{ fontSize: 15, color: 'var(--text-soft)', textAlign: 'center' }}>
+          {method === 'card' ? '카드 정보를 모두 입력해주세요.' : ''}
+        </p>
+      )}
     </>
   )
 }
