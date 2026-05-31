@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { SearchIcon } from './icons.jsx'
+import { searchByKeyword } from './placesService.js'
 
-// 목업 장소 데이터 (카카오 로컬 API 없을 때 폴백)
 const PLACES_MOCK = [
   {
     id: '1', name: '강남 복지관', address: '서울 강남구 삼성로 100길 10', rating: 4.5,
     programs: [
       { id: 'p1', name: '노래교실',   time: '오전 10:00 ~ 12:00', price: 5000,  days: ['월', '수', '금'] },
       { id: 'p2', name: '요가교실',   time: '오후 2:00 ~ 3:30',   price: 8000,  days: ['화', '목'] },
-      { id: 'p3', name: '건강검진 상담', time: '오전 9:00 ~ 11:00', price: 0,  days: ['월', '화', '수', '목', '금'] },
+      { id: 'p3', name: '건강검진 상담', time: '오전 9:00 ~ 11:00', price: 0,   days: ['월', '화', '수', '목', '금'] },
     ],
   },
   {
@@ -28,13 +28,12 @@ const PLACES_MOCK = [
   {
     id: '4', name: '마포 주간보호센터', address: '서울 마포구 마포대로 45', rating: 4.6,
     programs: [
-      { id: 'p8', name: '인지훈련 교실', time: '오전 9:30 ~ 11:30', price: 0, days: ['월', '화', '수', '목', '금'] },
+      { id: 'p8', name: '인지훈련 교실', time: '오전 9:30 ~ 11:30', price: 0,    days: ['월', '화', '수', '목', '금'] },
       { id: 'p9', name: '원예치료',      time: '오후 2:00 ~ 3:30',  price: 5000, days: ['화', '목'] },
     ],
   },
 ]
 
-// 검색 결과로 선택된 장소에 programs 정보가 없을 때 사용하는 기본값
 const DEFAULT_PROGRAMS = [
   { id: 'def-1', name: '방문 예약',    time: '평일 09:00 ~ 18:00', price: 0,     days: ['월', '화', '수', '목', '금'] },
   { id: 'def-2', name: '전화 상담',    time: '평일 10:00 ~ 16:00', price: 0,     days: ['월', '화', '수', '목', '금'] },
@@ -46,25 +45,36 @@ const AVAILABLE_DATES = [
   '5월 30일 (금)', '6월 2일 (월)',  '6월 3일 (화)',
 ]
 
-export default function ReservePanel({ onTutAdvance, initialPlace }) {
-  const [step, setStep]           = useState(initialPlace ? 1 : 0) // 0:검색 1:장소 2:예약상세 3:결제 4:완료
+const CARD_COMPANIES = ['카드사 선택', '국민카드', '신한카드', '삼성카드', '현대카드', '롯데카드', '하나카드', '우리카드', 'NH농협카드']
+
+function loadSavedCard() {
+  try { return JSON.parse(localStorage.getItem('silvermap_card')) } catch { return null }
+}
+
+export default function ReservePanel({ onTutAdvance, initialPlace, from }) {
+  const [step, setStep]           = useState(initialPlace ? 1 : 0)
   const [query, setQuery]         = useState('')
   const [results, setResults]     = useState(PLACES_MOCK)
+  const [searchLoading, setSearchLoading] = useState(false)
   const [place, setPlace]         = useState(initialPlace || null)
   const [program, setProgram]     = useState(null)
   const [date, setDate]           = useState(null)
   const [people, setPeople]       = useState(1)
   const [bookingNum, setBookingNum] = useState('')
 
-  function search(e) {
+  async function search(e) {
     e?.preventDefault()
     const q = query.trim()
     if (!q) { setResults(PLACES_MOCK); return }
-    setResults(
-      PLACES_MOCK.filter(
-        (p) => p.name.includes(q) || p.address.includes(q)
-      )
-    )
+    setSearchLoading(true)
+    try {
+      const places = await searchByKeyword(q, from)
+      setResults(places.length > 0 ? places : [])
+    } catch {
+      const fallback = PLACES_MOCK.filter(p => p.name.includes(q) || p.address.includes(q))
+      setResults(fallback)
+    }
+    setSearchLoading(false)
     onTutAdvance?.()
   }
 
@@ -77,8 +87,6 @@ export default function ReservePanel({ onTutAdvance, initialPlace }) {
   }
 
   function pay() {
-    // 실제 PG(토스페이먼츠/아임포트) 연동 위치.
-    // 카드 정보는 PG 위젯이 처리 — 앱이 직접 저장하지 않음.
     console.warn('[ReservePanel] PG 결제 미연동 — 목업 완료 처리')
     const num = 'SLV' + Date.now().toString().slice(-8)
     setBookingNum(num)
@@ -110,7 +118,6 @@ export default function ReservePanel({ onTutAdvance, initialPlace }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* 항상 노출되는 뒤로 가기 버튼 */}
       {step > 0 && (
         <button
           onClick={goBack}
@@ -128,7 +135,7 @@ export default function ReservePanel({ onTutAdvance, initialPlace }) {
         <SearchStep
           query={query} setQuery={setQuery}
           results={results} onSearch={search}
-          onSelect={selectPlace}
+          onSelect={selectPlace} loading={searchLoading}
         />
       )}
       {step === 1 && (
@@ -155,14 +162,14 @@ export default function ReservePanel({ onTutAdvance, initialPlace }) {
 
 /* ===== 단계별 서브 컴포넌트 ===== */
 
-function SearchStep({ query, setQuery, results, onSearch, onSelect }) {
+function SearchStep({ query, setQuery, results, onSearch, onSelect, loading }) {
   return (
     <>
       <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>어디를 예약할까요?</p>
 
       <form data-tutorial="reserve-search" onSubmit={onSearch} style={{ display: 'flex', gap: 8 }}>
         <div style={{
-          flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+          flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8,
           background: 'var(--surface)', border: '2px solid var(--border)',
           borderRadius: 30, padding: '0 14px',
         }}>
@@ -178,34 +185,44 @@ function SearchStep({ query, setQuery, results, onSearch, onSelect }) {
         </button>
       </form>
 
-      {results.length === 0 && (
+      {loading && (
+        <p style={{ textAlign: 'center', color: 'var(--text-soft)', padding: 16, fontSize: 'var(--fs-base)' }}>
+          찾는 중입니다...
+        </p>
+      )}
+
+      {!loading && results.length === 0 && (
         <p style={{ textAlign: 'center', color: 'var(--text-soft)', padding: 24, fontSize: 'var(--fs-base)' }}>
           검색 결과가 없습니다.
         </p>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {results.map((p, i) => (
-          <button
-            key={p.id}
-            data-tutorial={i === 0 ? 'reserve-result' : undefined}
-            onClick={() => onSelect(p)}
-            style={{
-              textAlign: 'left', background: '#fff',
-              border: '2px solid var(--border)', borderRadius: 'var(--radius)',
-              padding: '16px 18px',
-            }}
-          >
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>{p.name}</div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 4 }}>
-              {p.address}
-            </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: '#f59e0b', marginTop: 4 }}>
-              ★ {p.rating}
-            </div>
-          </button>
-        ))}
-      </div>
+      {!loading && results.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {results.map((p, i) => (
+            <button
+              key={p.id}
+              data-tutorial={i === 0 ? 'reserve-result' : undefined}
+              onClick={() => onSelect(p)}
+              style={{
+                textAlign: 'left', background: '#fff',
+                border: '2px solid var(--border)', borderRadius: 'var(--radius)',
+                padding: '16px 18px',
+              }}
+            >
+              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>{p.name}</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 4 }}>
+                {p.address}
+              </div>
+              {p.rating && (
+                <div style={{ fontSize: 'var(--fs-sm)', color: '#f59e0b', marginTop: 4 }}>
+                  ★ {p.rating}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </>
   )
 }
@@ -214,7 +231,6 @@ function PlaceDetailStep({ place, onSelect }) {
   const programs = place.programs || DEFAULT_PROGRAMS
   return (
     <>
-      {/* 장소 요약 카드 */}
       <div style={{
         background: 'var(--surface)', borderRadius: 'var(--radius)',
         padding: '16px 18px', marginBottom: 4,
@@ -260,7 +276,6 @@ function PlaceDetailStep({ place, onSelect }) {
 function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }) {
   return (
     <>
-      {/* 선택한 프로그램 요약 */}
       <div style={{
         background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '14px 18px',
       }}>
@@ -268,7 +283,6 @@ function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>{program.time}</div>
       </div>
 
-      {/* 날짜 선택 */}
       <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>날짜를 선택해주세요</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {AVAILABLE_DATES.map((d) => (
@@ -289,7 +303,6 @@ function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }
         ))}
       </div>
 
-      {/* 인원 선택 */}
       <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, marginTop: 8 }}>인원을 선택해주세요</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, justifyContent: 'center', marginBottom: 4 }}>
         <button
@@ -300,9 +313,7 @@ function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }
             background: 'var(--surface)', border: '2px solid var(--border)',
             fontSize: 30, fontWeight: 700,
           }}
-        >
-          −
-        </button>
+        >−</button>
         <div style={{ textAlign: 'center' }}>
           <span style={{ fontSize: 'var(--fs-xxl)', fontWeight: 900 }}>{people}</span>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)' }}>명</div>
@@ -315,9 +326,7 @@ function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }
             background: 'var(--surface)', border: '2px solid var(--border)',
             fontSize: 30, fontWeight: 700,
           }}
-        >
-          +
-        </button>
+        >+</button>
       </div>
 
       <button onClick={onNext} className="btn btn-primary" style={{ marginTop: 12, fontSize: 'var(--fs-lg)' }}>
@@ -329,7 +338,12 @@ function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }
 
 function PaymentStep({ place, program, date, people, onPay }) {
   const total = program.price * people
-  const [method, setMethod]     = useState(null)
+  const [savedCard, setSavedCard] = useState(loadSavedCard)
+  const [method, setMethod]       = useState(savedCard ? 'saved' : 'newcard')
+  const [showCardForm, setShowCardForm] = useState(!savedCard)
+  const [cardCompany, setCardCompany]   = useState('')
+
+  // 카드 입력 폼
   const [cardNum, setCardNum]   = useState('')
   const [cardExp, setCardExp]   = useState('')
   const [cardCvc, setCardCvc]   = useState('')
@@ -345,12 +359,51 @@ function PaymentStep({ place, program, date, people, onPay }) {
     return digits
   }
 
-  const canPay = method === 'free'
-    || method === 'kakaopay'
-    || method === 'tosspay'
-    || method === 'onsite'
-    || (method === 'card' && cardNum.replace(/\s/g,'').length === 16 && cardExp.length >= 5 && cardCvc.length >= 3)
+  function saveCard() {
+    const last4 = cardNum.replace(/\s/g, '').slice(-4)
+    const card = {
+      maskedNum: `•••• •••• •••• ${last4}`,
+      expiry: cardExp,
+      holderName: cardName,
+      company: cardCompany || '신용/체크카드',
+    }
+    localStorage.setItem('silvermap_card', JSON.stringify(card))
+    setSavedCard(card)
+    setShowCardForm(false)
+    setMethod('saved')
+  }
 
+  const cardFormValid =
+    cardNum.replace(/\s/g, '').length === 16 &&
+    cardExp.length >= 5 &&
+    cardCvc.length >= 3 &&
+    cardName.trim().length > 0
+
+  const canPay =
+    method === 'saved' ||
+    method === 'onsite' ||
+    (method === 'newcard' && cardFormValid)
+
+  function handlePay() {
+    if (method === 'newcard' && cardFormValid) saveCard()
+    onPay()
+  }
+
+  function callFamily() {
+    const saved = localStorage.getItem('silvermap_family_tel')
+    if (saved) {
+      window.location.href = `tel:${saved}`
+    } else {
+      const num = window.prompt('자녀 전화번호를 입력해주세요\n(예: 010-1234-5678)')
+      if (num) {
+        const clean = num.replace(/[^0-9]/g, '')
+        localStorage.setItem('silvermap_family_tel', clean)
+        window.location.href = `tel:${clean}`
+      }
+    }
+  }
+
+  // 무료 예약
   if (total === 0) {
     return (
       <>
@@ -368,6 +421,17 @@ function PaymentStep({ place, program, date, people, onPay }) {
         </div>
         <button onClick={onPay} className="btn btn-primary" style={{ fontSize: 'var(--fs-lg)' }}>
           무료 예약 완료
+        </button>
+        <button
+          onClick={callFamily}
+          style={{
+            display: 'block', margin: '16px auto 0',
+            fontSize: 15, color: 'var(--text-soft)',
+            background: 'none', border: 'none',
+            textDecoration: 'underline', cursor: 'pointer',
+          }}
+        >
+          📞 자녀에게 부탁하기
         </button>
       </>
     )
@@ -391,150 +455,172 @@ function PaymentStep({ place, program, date, people, onPay }) {
       </div>
 
       {/* 결제 수단 */}
-      <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, marginTop: 4 }}>결제 수단 선택</p>
+      <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, marginTop: 4 }}>결제 수단</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* 카카오페이 */}
-        <button
-          onClick={() => setMethod('kakaopay')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 14,
-            padding: '16px 18px', borderRadius: 'var(--radius)',
-            border: method === 'kakaopay' ? '3px solid #3c1e1e' : '2px solid var(--border)',
-            background: method === 'kakaopay' ? '#fee500' : '#fff',
-            transition: 'all 120ms', textAlign: 'left',
-          }}
-        >
-          <span style={{ fontSize: 32, lineHeight: 1 }}>💛</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: '#3c1e1e' }}>카카오페이</div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: '#7a5a00', marginTop: 2 }}>카카오 계정으로 간편 결제</div>
-          </div>
-          {method === 'kakaopay' && <span style={{ fontSize: 22, color: '#3c1e1e' }}>✓</span>}
-        </button>
-
-        {/* 토스페이 */}
-        <button
-          onClick={() => setMethod('tosspay')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 14,
-            padding: '16px 18px', borderRadius: 'var(--radius)',
-            border: method === 'tosspay' ? '3px solid #0064ff' : '2px solid var(--border)',
-            background: method === 'tosspay' ? '#e8f0ff' : '#fff',
-            transition: 'all 120ms', textAlign: 'left',
-          }}
-        >
-          <span style={{ fontSize: 32, lineHeight: 1 }}>💙</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: '#0064ff' }}>토스페이</div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: '#3a5fa8', marginTop: 2 }}>토스 앱으로 간편 결제</div>
-          </div>
-          {method === 'tosspay' && <span style={{ fontSize: 22, color: '#0064ff' }}>✓</span>}
-        </button>
-
-        {/* 신용·체크카드 */}
+        {/* 신용/체크카드 */}
         <div style={{
           borderRadius: 'var(--radius)',
-          border: method === 'card' ? '3px solid var(--primary)' : '2px solid var(--border)',
-          background: '#fff', overflow: 'hidden', transition: 'border 120ms',
+          border: (method === 'saved' || method === 'newcard') ? '3px solid var(--primary)' : '2px solid var(--border)',
+          background: '#fff', overflow: 'hidden',
         }}>
+          {/* 라디오 헤더 */}
           <button
-            onClick={() => setMethod(method === 'card' ? null : 'card')}
+            onClick={() => {
+              if (method === 'onsite') {
+                setMethod(savedCard ? 'saved' : 'newcard')
+                setShowCardForm(!savedCard)
+              }
+            }}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 14,
               padding: '16px 18px', background: 'transparent', textAlign: 'left',
             }}
           >
+            <RadioDot active={method === 'saved' || method === 'newcard'} />
             <span style={{ fontSize: 32, lineHeight: 1 }}>💳</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: 'var(--text)' }}>신용·체크카드</div>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 2 }}>국내외 모든 카드 사용 가능</div>
+              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: 'var(--text)' }}>신용/체크카드</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 2 }}>한 번 등록하면 다음에도 바로 결제</div>
             </div>
-            <span style={{ fontSize: 20, color: 'var(--text-soft)' }}>{method === 'card' ? '▲' : '▼'}</span>
           </button>
 
-          {method === 'card' && (
+          {/* 등록된 카드 표시 or 카드 입력 폼 */}
+          {(method === 'saved' || method === 'newcard') && (
             <div style={{ padding: '0 18px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
-                  카드 번호
-                </label>
-                <input
-                  type="tel" inputMode="numeric"
-                  placeholder="1234 5678 9012 3456"
-                  value={cardNum}
-                  onChange={e => setCardNum(fmtCardNum(e.target.value))}
-                  style={{
-                    width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
-                    border: '2px solid var(--border)', borderRadius: 14,
-                    background: 'var(--surface)', letterSpacing: 2,
-                  }}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
-                    유효기간
-                  </label>
-                  <input
-                    type="tel" inputMode="numeric"
-                    placeholder="MM / YY"
-                    value={cardExp}
-                    onChange={e => setCardExp(fmtExp(e.target.value))}
+
+              {savedCard && !showCardForm ? (
+                /* 등록된 카드 */
+                <>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: 'var(--surface)', borderRadius: 14, padding: '14px 16px',
+                    border: '2px solid var(--border)',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 'var(--fs-base)', fontWeight: 900 }}>
+                        {savedCard.company}
+                      </div>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 4, letterSpacing: 2 }}>
+                        {savedCard.maskedNum}
+                      </div>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 2 }}>
+                        {savedCard.holderName} · 유효기간 {savedCard.expiry}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setShowCardForm(true); setMethod('newcard') }}
+                      style={{
+                        fontSize: 15, fontWeight: 700, color: 'var(--primary)',
+                        background: 'var(--surface)', border: '2px solid var(--primary)',
+                        borderRadius: 10, padding: '8px 16px', flexShrink: 0,
+                      }}
+                    >
+                      변경
+                    </button>
+                  </div>
+
+                  {/* 카드사 선택 */}
+                  <select
+                    value={cardCompany}
+                    onChange={e => setCardCompany(e.target.value)}
                     style={{
                       width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
                       border: '2px solid var(--border)', borderRadius: 14,
-                      background: 'var(--surface)',
+                      background: 'var(--surface)', color: cardCompany ? 'var(--text)' : 'var(--text-soft)',
+                      appearance: 'none', WebkitAppearance: 'none',
                     }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
-                    CVC
-                  </label>
-                  <input
-                    type="tel" inputMode="numeric"
-                    placeholder="123"
-                    maxLength={4}
-                    value={cardCvc}
-                    onChange={e => setCardCvc(e.target.value.replace(/\D/g,'').slice(0,4))}
-                    style={{
-                      width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
-                      border: '2px solid var(--border)', borderRadius: 14,
-                      background: 'var(--surface)',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
-                  카드 소유자 이름
-                </label>
-                <input
-                  type="text"
-                  placeholder="홍길동"
-                  value={cardName}
-                  onChange={e => setCardName(e.target.value)}
-                  style={{
-                    width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
-                    border: '2px solid var(--border)', borderRadius: 14,
-                    background: 'var(--surface)',
-                  }}
-                />
-              </div>
-              <div style={{
-                background: '#f0f7ff', border: '2px solid var(--primary)',
-                borderRadius: 12, padding: '10px 14px',
-                fontSize: 15, color: 'var(--text-soft)', lineHeight: 1.6,
-              }}>
-                🔒 카드 정보는 암호화되어 안전하게 처리됩니다
-              </div>
+                  >
+                    {CARD_COMPANIES.map(c => (
+                      <option key={c} value={c === '카드사 선택' ? '' : c}>{c}</option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                /* 카드 입력 폼 */
+                <>
+                  <div>
+                    <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
+                      카드 번호
+                    </label>
+                    <input
+                      type="tel" inputMode="numeric"
+                      placeholder="1234 5678 9012 3456"
+                      value={cardNum}
+                      onChange={e => setCardNum(fmtCardNum(e.target.value))}
+                      style={{
+                        width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
+                        border: '2px solid var(--border)', borderRadius: 14,
+                        background: 'var(--surface)', letterSpacing: 2, boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
+                        유효기간
+                      </label>
+                      <input
+                        type="tel" inputMode="numeric"
+                        placeholder="MM / YY"
+                        value={cardExp}
+                        onChange={e => setCardExp(fmtExp(e.target.value))}
+                        style={{
+                          width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
+                          border: '2px solid var(--border)', borderRadius: 14,
+                          background: 'var(--surface)', boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
+                        CVC
+                      </label>
+                      <input
+                        type="tel" inputMode="numeric"
+                        placeholder="123"
+                        maxLength={4}
+                        value={cardCvc}
+                        onChange={e => setCardCvc(e.target.value.replace(/\D/g,'').slice(0,4))}
+                        style={{
+                          width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
+                          border: '2px solid var(--border)', borderRadius: 14,
+                          background: 'var(--surface)', boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-soft)', display: 'block', marginBottom: 6 }}>
+                      카드 소유자 이름
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="홍길동"
+                      value={cardName}
+                      onChange={e => setCardName(e.target.value)}
+                      style={{
+                        width: '100%', padding: '14px 16px', fontSize: 'var(--fs-base)',
+                        border: '2px solid var(--border)', borderRadius: 14,
+                        background: 'var(--surface)', boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div style={{
+                    background: '#f0f7ff', border: '2px solid var(--primary)',
+                    borderRadius: 12, padding: '10px 14px',
+                    fontSize: 15, color: 'var(--text-soft)', lineHeight: 1.6,
+                  }}>
+                    🔒 카드 정보는 암호화되어 안전하게 처리됩니다
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
 
-        {/* 현장 결제 */}
+        {/* 현장에서 결제 */}
         <button
           onClick={() => setMethod('onsite')}
           style={{
@@ -545,33 +631,60 @@ function PaymentStep({ place, program, date, people, onPay }) {
             transition: 'all 120ms', textAlign: 'left',
           }}
         >
+          <RadioDot active={method === 'onsite'} color="var(--success)" />
           <span style={{ fontSize: 32, lineHeight: 1 }}>💵</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 900, color: 'var(--text)' }}>현장에서 결제</div>
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 2 }}>방문 후 현금 또는 카드로 결제</div>
           </div>
-          {method === 'onsite' && <span style={{ fontSize: 22, color: 'var(--success)' }}>✓</span>}
         </button>
       </div>
 
+      {/* 결제 버튼 */}
       <button
-        onClick={onPay}
+        onClick={handlePay}
         className="btn btn-primary"
         disabled={!canPay}
         style={{ fontSize: 'var(--fs-lg)', marginTop: 4, opacity: canPay ? 1 : 0.45 }}
       >
-        {method === 'kakaopay' ? `💛 카카오페이로 ${total.toLocaleString()}원 결제`
-          : method === 'tosspay' ? `💙 토스페이로 ${total.toLocaleString()}원 결제`
-          : method === 'card' ? `💳 카드로 ${total.toLocaleString()}원 결제`
-          : method === 'onsite' ? `예약 완료 (현장 결제)`
-          : '결제 수단을 선택해주세요'}
+        {method === 'onsite'
+          ? '예약 완료 (현장 결제)'
+          : `💳 ${total.toLocaleString()}원 결제하기`}
       </button>
-      {!canPay && method && (
+
+      {!canPay && method === 'newcard' && (
         <p style={{ fontSize: 15, color: 'var(--text-soft)', textAlign: 'center' }}>
-          {method === 'card' ? '카드 정보를 모두 입력해주세요.' : ''}
+          카드 정보를 모두 입력해주세요.
         </p>
       )}
+
+      {/* 자녀에게 부탁하기 */}
+      <button
+        onClick={callFamily}
+        style={{
+          display: 'block', margin: '8px auto 4px',
+          fontSize: 15, color: 'var(--text-soft)',
+          background: 'none', border: 'none',
+          textDecoration: 'underline', cursor: 'pointer',
+        }}
+      >
+        📞 자녀에게 부탁하기
+      </button>
     </>
+  )
+}
+
+function RadioDot({ active, color }) {
+  const c = color || 'var(--primary)'
+  return (
+    <div style={{
+      width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+      border: `2px solid ${active ? c : 'var(--border)'}`,
+      background: active ? c : '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {active && <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fff' }} />}
+    </div>
   )
 }
 

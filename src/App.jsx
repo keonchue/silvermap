@@ -225,13 +225,13 @@ export default function App() {
         {/* 예약하기 — 바텀 시트로 바로 표시 (지도 검색 불필요) */}
         {tab === 'reserve' && !reserveSelected && (
           <SnapSheet>
-            <ReservePanel onTutAdvance={nextTutorialStep} />
+            <ReservePanel from={origin} onTutAdvance={nextTutorialStep} />
           </SnapSheet>
         )}
         {/* PlaceSheet/지도에서 장소 선택 후: 전체 화면 예약 마법사 */}
         {tab === 'reserve' && reserveSelected && (
           <Panel title={reserveSelected.name} onClose={() => setReserveSelected(null)} full compactTitle>
-            <ReservePanel initialPlace={reserveSelected} onTutAdvance={nextTutorialStep} />
+            <ReservePanel from={origin} initialPlace={reserveSelected} onTutAdvance={nextTutorialStep} />
           </Panel>
         )}
 
