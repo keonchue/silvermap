@@ -84,7 +84,7 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
           <input
             type="search" value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="장소·주소·버스 검색"
+            placeholder="검색"
             aria-label="장소 검색어" enterKeyHint="search"
             style={{
               flex: 1, border: 'none', background: 'transparent',
@@ -96,7 +96,7 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
             <MicIcon size={24} />
           </button>
         </div>
-        <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 20px' }}>
+        <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 20px', flexShrink: 0 }}>
           찾기
         </button>
       </form>

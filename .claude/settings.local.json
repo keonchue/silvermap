@@ -14,7 +14,27 @@
       "Bash(git push *)",
       "Bash(gh run *)",
       "Bash(curl -s https://keonchue.github.io/silvermap/)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "WebFetch(domain:localhost)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:5173/silvermap/\" -UseBasicParsing; $r.StatusCode; $r.Content | Select-String \"manifest|viewport-fit|apple-mobile\")",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:5173/silvermap/manifest.json\" -UseBasicParsing; $r.StatusCode; $r.Content)",
+      "Bash(where playwright *)",
+      "Bash(npx playwright *)",
+      "Bash(node -e ' *)",
+      "Bash(mkdir -p /tmp)",
+      "Bash(npm list *)",
+      "Read(//c/tmp/**)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(git rm *)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(copy \"webfetch-1779992064109-em6fg5.bin\" \"design.gz\")",
+      "Bash(7z x *)",
+      "Bash(Start-Sleep -Seconds 3)",
+      "Bash(Get-Content \"C:\\\\Users\\\\Keon\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Keon-Desktop-silvermap\\\\2473c7b0-cb6d-44db-ba13-ce8c874738a8\\\\tasks\\\\b1xh0kudi.output\" -Tail 20)",
+      "Bash(npx vite *)"
     ]
   }
 }

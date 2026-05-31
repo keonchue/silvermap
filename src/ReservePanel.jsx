@@ -173,7 +173,7 @@ function SearchStep({ query, setQuery, results, onSearch, onSelect }) {
             style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 18, padding: '13px 0', outline: 'none' }}
           />
         </div>
-        <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 22px' }}>
+        <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '0 22px', flexShrink: 0 }}>
           검색
         </button>
       </form>
