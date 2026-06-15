@@ -126,8 +126,11 @@ export default function App() {
   function onTabChange(next) {
     setSelectedPlace(null)
     if (tab === next && next !== 'home') { closePanel(); return }
+    // 탭 전환 시 지도 상태(경로선·마커·검색결과) 완전 초기화
+    setRoute(null)
+    setMarkers([])
+    setSearchResult(null)
     if (next !== 'directions') { setDirectionsSeed(null); setDirectionsSeedMode('walk') }
-    // 탭 전환 시 이전 탭 flow 상태 초기화
     setFlowResults([])
     setReserveResults([])
     setReserveSelected(null)
@@ -165,8 +168,9 @@ export default function App() {
       return
     }
 
-    // 기본: 지도 마커 검색
+    // 기본: 지도 마커 검색 (이전 경로선 제거)
     const places = await searchByKeyword(query, origin)
+    setRoute(null)
     setMarkers(places)
     setSearchResult({ places, query })
     if (!tab) setTab('search-result')
