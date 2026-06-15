@@ -28,7 +28,7 @@ export function loadKakaoSdk() {
     const script = document.createElement('script')
     script.src =
       `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}` +
-      `&libraries=services&autoload=false`
+      `&libraries=services,roadview&autoload=false`
     script.async = true
     script.onload = init
     script.onerror = () => reject(new Error('SDK_LOAD_FAILED'))

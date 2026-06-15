@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { distanceMeters } from './placesService.js'
 import { getRoadRoute, getTransitRoute, getWalkRoute, estimateTransit } from './routeService.js'
+import RoadviewSheet from './RoadviewSheet.jsx'
 
 function speak(text) {
   if (!window.speechSynthesis) return
@@ -58,6 +60,7 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
   const [carInfo, setCarInfo]   = useState(null)  // { mins }
   const [transitInfo, setTransitInfo] = useState(null)  // { duration, fare, legs }
   const [routeLoading, setRouteLoading] = useState(false)
+  const [pendingDest, setPendingDest] = useState(null)  // 로드뷰 확인 대기 중인 목적지
 
   useEffect(() => {
     if (initialDest) fetchAllRoutes(initialDest)
@@ -106,11 +109,16 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
   }
 
   function selectDest(place) {
+    setPendingDest(place)
+    onTutAdvance()
+  }
+
+  function confirmDest(place) {
+    setPendingDest(null)
     setDest(place)
     setMode('walk')
     setWalkInfo(null); setCarInfo(null); setTransitInfo(null)
     fetchAllRoutes(place)
-    onTutAdvance()
   }
 
   function startNav() {
@@ -134,6 +142,16 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 18 }}>
+
+      {/* 로드뷰 — document.body에 portal로 렌더링해 z-index 충돌 방지 */}
+      {pendingDest && createPortal(
+        <RoadviewSheet
+          place={pendingDest}
+          onConfirm={() => confirmDest(pendingDest)}
+          onSkip={() => confirmDest(pendingDest)}
+        />,
+        document.body
+      )}
 
       {/* 검색 중 */}
       {loading && (
