@@ -14,15 +14,6 @@ export default function RoadviewSheet({ place, onConfirm, onSkip }) {
         const kakao = await loadKakaoSdk()
         if (!alive || !containerRef.current) return
 
-        // kakao.maps.load() 콜백이 5초 타임아웃으로 먼저 resolve된 경우
-        // roadview 라이브러리가 아직 초기화 중일 수 있으므로 최대 3초 대기
-        if (!kakao.maps.RoadviewClient) {
-          for (let i = 0; i < 6; i++) {
-            await new Promise(r => setTimeout(r, 500))
-            if (!alive) return
-            if (kakao.maps.RoadviewClient) break
-          }
-        }
         if (!kakao.maps.RoadviewClient) { onSkip(); return }
 
         const latlng = new kakao.maps.LatLng(place.lat, place.lng)
