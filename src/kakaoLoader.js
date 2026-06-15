@@ -18,7 +18,11 @@ export function loadKakaoSdk() {
       return
     }
     const init = () => {
-      window.kakao.maps.load(() => resolve(window.kakao))
+      // roadview 등 라이브러리 로드 실패 시 콜백이 안 올 수 있음 → 5초 후 강제 진행
+      let settled = false
+      const settle = () => { if (!settled) { settled = true; resolve(window.kakao) } }
+      setTimeout(settle, 5000)
+      window.kakao.maps.load(settle)
     }
     if (window.kakao?.maps) {
       init()
