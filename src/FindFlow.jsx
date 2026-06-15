@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { distanceMeters } from './placesService.js'
 import { getRoadRoute, getTransitRoute, getWalkRoute, estimateTransit } from './routeService.js'
@@ -62,6 +62,7 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
   const [routeLoading, setRouteLoading] = useState(false)
   const [pendingDest, setPendingDest] = useState(null)  // 로드뷰 확인 대기 중인 목적지
   const [navMode, setNavMode]         = useState(false)  // 안내 시작 후 패널 최소화
+  const dragStartY = useRef(null)
 
   useEffect(() => {
     if (initialDest) fetchAllRoutes(initialDest)
@@ -197,7 +198,7 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
       {/* 목적지 선택 후: 바텀 패널 */}
       {showRouteUI && (
         <>
-          {/* Bottom panel */}
+          {/* Bottom panel — navMode 시 완전히 숨김 */}
           <div style={{
             position: 'absolute', left: 0, right: 0, bottom: 0,
             maxHeight: '92%',
@@ -207,10 +208,10 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
             pointerEvents: 'auto',
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
-            transform: navMode ? 'translateY(calc(100% - 76px))' : 'translateY(0)',
+            transform: navMode ? 'translateY(100%)' : 'translateY(0)',
             transition: 'transform 380ms cubic-bezier(0.34, 1.1, 0.64, 1)',
           }}>
-            {/* Grab handle — 고정 */}
+            {/* Grab handle */}
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0', flexShrink: 0 }}>
               <div style={{ width: 56, height: 5, borderRadius: 99, background: 'var(--border)' }} />
             </div>
@@ -439,58 +440,68 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
 
             </div>{/* /스크롤 영역 끝 */}
 
-            {/* 하단 고정: 안내 시작 버튼 or 안내 중 peek */}
-            {!navMode ? (
-              <div style={{
-                flexShrink: 0,
-                padding: '10px 18px',
-                paddingBottom: 'max(18px, env(safe-area-inset-bottom))',
-                borderTop: '1px solid var(--border)',
-                background: 'var(--card)',
-              }}>
-                <button
-                  data-tutorial="go"
-                  onClick={startNav}
-                  style={{
-                    width: '100%', minHeight: 64, padding: '0 24px',
-                    background: 'var(--success)', color: '#fff',
-                    borderRadius: 'var(--radius)', fontSize: 22, fontWeight: 900,
-                    boxShadow: '0 8px 20px rgba(28,157,89,.3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                  }}
-                >
-                  🔊 안내 시작
-                </button>
-              </div>
-            ) : (
-              <div
-                onClick={() => setNavMode(false)}
+            {/* 하단 고정: 안내 시작 버튼 */}
+            <div style={{
+              flexShrink: 0,
+              padding: '10px 18px',
+              paddingBottom: 'max(18px, env(safe-area-inset-bottom))',
+              borderTop: '1px solid var(--border)',
+              background: 'var(--card)',
+            }}>
+              <button
+                data-tutorial="go"
+                onClick={startNav}
                 style={{
-                  flexShrink: 0, height: 76,
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center',
-                  gap: 8, cursor: 'pointer',
-                  borderTop: '2px solid var(--primary)',
-                  padding: '0 20px',
-                  background: 'var(--card)',
+                  width: '100%', minHeight: 64, padding: '0 24px',
+                  background: 'var(--success)', color: '#fff',
+                  borderRadius: 'var(--radius)', fontSize: 22, fontWeight: 900,
+                  boxShadow: '0 8px 20px rgba(28,157,89,.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                 }}
               >
-                <div style={{ width: 44, height: 4, borderRadius: 99, background: 'var(--primary)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
-                  <span style={{ fontSize: 22 }}>🔊</span>
-                  <span style={{
-                    flex: 1, fontSize: 'var(--fs-base)', fontWeight: 900, color: 'var(--success)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {dest.name} 안내 중
-                  </span>
-                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>
-                    ↑ 상세보기
-                  </span>
-                </div>
-              </div>
-            )}
+                🔊 안내 시작
+              </button>
+            </div>
           </div>
+
+          {/* 안내 중 플로팅 버튼 — 패널이 숨겨진 동안 하단에 표시 */}
+          {navMode && (
+            <div
+              onClick={() => setNavMode(false)}
+              onTouchStart={e => { dragStartY.current = e.touches[0].clientY }}
+              onTouchEnd={e => {
+                if (dragStartY.current === null) return
+                if (dragStartY.current - e.changedTouches[0].clientY > 30) setNavMode(false)
+                dragStartY.current = null
+              }}
+              style={{
+                position: 'absolute',
+                bottom: 'max(20px, env(safe-area-inset-bottom))',
+                left: 16, right: 16,
+                height: 64,
+                background: 'var(--card)',
+                borderRadius: 32,
+                padding: '0 20px',
+                display: 'flex', alignItems: 'center', gap: 14,
+                boxShadow: '0 6px 28px rgba(0,0,0,0.22)',
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                borderLeft: '5px solid var(--success)',
+              }}
+            >
+              <span style={{ fontSize: 26 }}>🔊</span>
+              <span style={{
+                flex: 1, fontWeight: 900, fontSize: 'var(--fs-base)',
+                color: 'var(--success)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {dest.name} 안내 중
+              </span>
+              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--primary)', fontWeight: 700, flexShrink: 0 }}>
+                상세보기 ↑
+              </span>
+            </div>
+          )}
         </>
       )}
     </div>
