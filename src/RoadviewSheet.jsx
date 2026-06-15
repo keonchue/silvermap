@@ -6,30 +6,24 @@ export default function RoadviewSheet({ place, onConfirm, onSkip }) {
   const [status, setStatus] = useState('loading') // 'loading' | 'ready' | 'unavailable'
 
   useEffect(() => {
-    console.log('[RV] useEffect, key설정?', isKakaoKeyConfigured(), 'KEY:', import.meta.env.VITE_KAKAO_MAP_KEY?.slice(0,6))
     if (!isKakaoKeyConfigured()) { onSkip(); return }
     let alive = true
 
     async function load() {
       try {
-        console.log('[RV] loadKakaoSdk 시작')
         const kakao = await loadKakaoSdk()
-        console.log('[RV] SDK 로드 완료, RoadviewClient:', !!kakao.maps.RoadviewClient)
         if (!alive || !containerRef.current) return
 
-        if (!kakao.maps.RoadviewClient) {
-          console.log('[RV] RoadviewClient 없음 → skip')
-          onSkip(); return
-        }
+        if (!kakao.maps.RoadviewClient) { onSkip(); return }
 
         const latlng = new kakao.maps.LatLng(place.lat, place.lng)
-        console.log('[RV] getNearestPanoId 호출:', place.lat, place.lng)
         const client = new kakao.maps.RoadviewClient()
 
         client.getNearestPanoId(latlng, 100, (panoId, rvStatus) => {
           console.log('[RV] panoId:', panoId, 'status:', rvStatus)
           if (!alive || !containerRef.current) return
-          if (rvStatus === kakao.maps.services.Status.OK) {
+          const found = panoId && (rvStatus?.service === true || rvStatus === kakao.maps.services.Status.OK)
+          if (found) {
             const rv = new kakao.maps.Roadview(containerRef.current)
             rv.setPanoId(panoId, latlng)
             if (alive) setStatus('ready')
@@ -40,8 +34,7 @@ export default function RoadviewSheet({ place, onConfirm, onSkip }) {
             }
           }
         })
-      } catch (e) {
-        console.log('[RV] 에러:', e)
+      } catch {
         if (alive) onSkip()
       }
     }
