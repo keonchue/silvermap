@@ -6,6 +6,7 @@ export default function RoadviewSheet({ place, onConfirm, onSkip }) {
   const [status, setStatus] = useState('loading') // 'loading' | 'ready' | 'unavailable'
 
   useEffect(() => {
+    console.log('[RV] useEffect, key설정?', isKakaoKeyConfigured(), 'KEY:', import.meta.env.VITE_KAKAO_MAP_KEY?.slice(0,6))
     if (!isKakaoKeyConfigured()) { onSkip(); return }
     let alive = true
 
