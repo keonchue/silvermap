@@ -71,7 +71,7 @@ export default function App() {
   const tutSteps = tutTab ? TUTORIALS[tutTab] : null
 
   function maybeStartTutorial(nextTab) {
-    if (TUTORIALS[nextTab]) {
+    if (TUTORIALS[nextTab] && !isTutorialSeen(nextTab)) {
       setTutTab(nextTab); setTutStep(0)
     }
   }
