@@ -91,11 +91,20 @@ export default function FindFlow({ from, onRoute, onTutAdvance, initialDest, ini
     if (carResult.duration) {
       setCarInfo({ mins: Math.round(carResult.duration / 60) })
     }
-    const straightMeters2 = Math.round(distanceMeters(from, place))
-    setTransitInfo(transitResult ?? estimateTransit(straightMeters2))
+    setTransitInfo(transitResult ?? estimateTransit(straightMeters))
 
-    // 선택된 모드로 지도 경로 초기화
-    await applyRouteToMap(place, mode)
+    // 이미 받은 결과를 재사용 — 중복 API 호출 방지
+    applyRouteFromResults(place, mode, walkResult, carResult)
+  }
+
+  function applyRouteFromResults(place, selectedMode, walkResult, carResult) {
+    if (selectedMode === 'walk') {
+      onRoute({ path: walkResult.path, dest: place })
+    } else if (selectedMode === 'car') {
+      onRoute({ path: carResult.path, dest: place })
+    } else {
+      onRoute({ path: [from, place], dest: place })
+    }
   }
 
   async function applyRouteToMap(place, selectedMode) {
