@@ -11,15 +11,22 @@ export default function RoadviewSheet({ place, onConfirm, onSkip }) {
 
     async function load() {
       try {
+        console.log('[RV] loadKakaoSdk 시작')
         const kakao = await loadKakaoSdk()
+        console.log('[RV] SDK 로드 완료, RoadviewClient:', !!kakao.maps.RoadviewClient)
         if (!alive || !containerRef.current) return
 
-        if (!kakao.maps.RoadviewClient) { onSkip(); return }
+        if (!kakao.maps.RoadviewClient) {
+          console.log('[RV] RoadviewClient 없음 → skip')
+          onSkip(); return
+        }
 
         const latlng = new kakao.maps.LatLng(place.lat, place.lng)
+        console.log('[RV] getNearestPanoId 호출:', place.lat, place.lng)
         const client = new kakao.maps.RoadviewClient()
 
         client.getNearestPanoId(latlng, 100, (panoId, rvStatus) => {
+          console.log('[RV] panoId:', panoId, 'status:', rvStatus)
           if (!alive || !containerRef.current) return
           if (rvStatus === kakao.maps.services.Status.OK) {
             const rv = new kakao.maps.Roadview(containerRef.current)
@@ -32,7 +39,8 @@ export default function RoadviewSheet({ place, onConfirm, onSkip }) {
             }
           }
         })
-      } catch {
+      } catch (e) {
+        console.log('[RV] 에러:', e)
         if (alive) onSkip()
       }
     }
