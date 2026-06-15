@@ -1,6 +1,6 @@
-// 카카오맵 JavaScript SDK를 동적으로 로드한다.
-// index.html의 script 태그가 autoload 방식으로 로드하므로
-// Map 생성자가 준비될 때까지 polling으로 대기한다.
+// Kakao Maps SDK 동적 로더
+// index.html 스크립트 태그 방식은 document.write()로 kakao.js를 주입해
+// Chrome이 차단할 수 있음. createElement 방식으로 직접 주입한다.
 
 const KEY = import.meta.env.VITE_KAKAO_MAP_KEY
 
@@ -19,42 +19,25 @@ export function loadKakaoSdk() {
       return
     }
 
-    // autoload 방식: script가 로드되면 kakao.maps.Map이 바로 사용 가능해짐
-    // 이미 준비된 경우 즉시 반환
-    if (window.kakao?.maps?.Map) {
-      resolve(window.kakao)
-      return
+    const init = () => {
+      let settled = false
+      const settle = () => { if (!settled) { settled = true; resolve(window.kakao) } }
+      window.kakao.maps.load(settle)
+      setTimeout(settle, 15000) // 15초 안전망
     }
 
-    // 아직 script 로드 중 → polling
-    const interval = setInterval(() => {
-      if (window.kakao?.maps?.Map) {
-        clearInterval(interval)
-        clearTimeout(timer)
-        resolve(window.kakao)
-      }
-    }, 100)
+    // 이미 로드된 경우
+    if (window.kakao?.maps) { init(); return }
 
-    const timer = setTimeout(() => {
-      clearInterval(interval)
-      // 타임아웃이어도 kakao 객체가 부분적으로 있으면 진행
-      if (window.kakao?.maps) resolve(window.kakao)
-      else reject(new Error('SDK_TIMEOUT'))
-    }, 10000)
-
-    // fallback: index.html script 없이 직접 주입된 경우
-    if (!window.kakao && !document.querySelector('script[src*="dapi.kakao.com"]')) {
-      const script = document.createElement('script')
-      script.src =
-        `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}` +
-        `&libraries=services,roadview`
-      script.onerror = () => {
-        clearInterval(interval)
-        clearTimeout(timer)
-        reject(new Error('SDK_LOAD_FAILED'))
-      }
-      document.head.appendChild(script)
-    }
+    // createElement로 동적 주입 — document.write() 미사용
+    const script = document.createElement('script')
+    script.src =
+      `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}` +
+      `&libraries=services,roadview&autoload=false`
+    script.async = true
+    script.onload = init
+    script.onerror = () => reject(new Error('SDK_LOAD_FAILED'))
+    document.head.appendChild(script)
   })
 
   return loadPromise
