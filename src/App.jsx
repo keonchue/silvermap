@@ -19,12 +19,32 @@ import { useGeolocation, DEFAULT_CENTER } from './useGeolocation.js'
 import { CloseIcon } from './icons.jsx'
 import { searchByKeyword } from './placesService.js'
 
+const FONT_BASE = { base: 20, sm: 17, lg: 24, xl: 30, xxl: 38 }
+
+function applyFontScale(scale) {
+  const r = document.documentElement.style
+  r.setProperty('--fs-base', `${Math.round(FONT_BASE.base * scale)}px`)
+  r.setProperty('--fs-sm',   `${Math.round(FONT_BASE.sm   * scale)}px`)
+  r.setProperty('--fs-lg',   `${Math.round(FONT_BASE.lg   * scale)}px`)
+  r.setProperty('--fs-xl',   `${Math.round(FONT_BASE.xl   * scale)}px`)
+  r.setProperty('--fs-xxl',  `${Math.round(FONT_BASE.xxl  * scale)}px`)
+  localStorage.setItem('silvermap_font', String(scale))
+}
+
 export default function App() {
   const [showSplash, setShowSplash] = useState(true)
 
   // tab: 'home' | 'directions' | 'reserve' | 'transit' | 'more'
   const [tab, setTab]                   = useState('home')
   const [installPrompt, setInstallPrompt] = useState(null)
+  const [showFontSize, setShowFontSize] = useState(false)
+  const [showBookings, setShowBookings] = useState(false)
+  const [fontScale, setFontScale] = useState(() => {
+    const s = parseFloat(localStorage.getItem('silvermap_font') || '1')
+    const scale = isNaN(s) ? 1 : Math.max(0.8, Math.min(2, s))
+    applyFontScale(scale)
+    return scale
+  })
 
   useEffect(() => {
     function onBeforeInstall(e) { e.preventDefault(); setInstallPrompt(e) }
@@ -284,6 +304,8 @@ export default function App() {
                 setTab('directions')
                 maybeStartTutorial('directions')
               }}
+              onFontSize={() => { closePanel(); setShowFontSize(true) }}
+              onBookings={() => { closePanel(); setShowBookings(true) }}
             />
           </Panel>
         )}
@@ -306,6 +328,27 @@ export default function App() {
           <Overlay onClose={() => setReservePlace(null)}>
             <Panel title="예약하기" onClose={() => setReservePlace(null)}>
               <ReservationModal place={reservePlace} onClose={() => setReservePlace(null)} />
+            </Panel>
+          </Overlay>
+        )}
+
+        {/* 글자 크기 설정 */}
+        {showFontSize && (
+          <Overlay onClose={() => setShowFontSize(false)}>
+            <Panel title="글자 크기 설정" onClose={() => setShowFontSize(false)}>
+              <FontSizeSheet
+                fontScale={fontScale}
+                onSelect={(s) => { applyFontScale(s); setFontScale(s); setShowFontSize(false) }}
+              />
+            </Panel>
+          </Overlay>
+        )}
+
+        {/* 내 예약 내역 */}
+        {showBookings && (
+          <Overlay onClose={() => setShowBookings(false)}>
+            <Panel title="내 예약 내역" onClose={() => setShowBookings(false)}>
+              <BookingHistoryPanel />
             </Panel>
           </Overlay>
         )}
@@ -487,12 +530,13 @@ function Overlay({ onClose, children }) {
   )
 }
 
-function MorePanel({ onReplayTutorials, installPrompt, onInstall }) {
+function MorePanel({ onReplayTutorials, installPrompt, onInstall, onFontSize, onBookings }) {
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
   const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone
   const items = [
     { label: '사용 도움말 다시 보기', desc: '튜토리얼을 처음부터 다시 보여드려요', onClick: onReplayTutorials },
-    { label: '글자 크기 설정', desc: '화면 글자 크기를 조절합니다' },
+    { label: '글자 크기 설정', desc: '화면 글자 크기를 조절합니다', onClick: onFontSize },
+    { label: '내 예약 내역', desc: '예약했던 내역을 확인합니다', onClick: onBookings },
     { label: '자주 묻는 질문', desc: '궁금한 점을 확인하세요' },
     { label: '앱 정보', desc: '큰지도 버전 정보' },
   ]
@@ -564,6 +608,89 @@ function MorePanel({ onReplayTutorials, installPrompt, onInstall }) {
         어려우신가요? 가족이나 주변 분에게 도움을 요청하시거나,
         전화로 문의해 주세요.
       </div>
+    </div>
+  )
+}
+
+function FontSizeSheet({ fontScale, onSelect }) {
+  const options = [
+    { label: '기본', scale: 1.0 },
+    { label: '크게', scale: 1.2 },
+    { label: '아주 크게', scale: 1.4 },
+  ]
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <p style={{ fontSize: 'var(--fs-base)', color: 'var(--text-soft)', lineHeight: 1.6 }}>
+        화면 글자 크기를 조절합니다. 원하시는 크기를 골라주세요.
+      </p>
+      {options.map(({ label, scale }) => {
+        const active = Math.abs(fontScale - scale) < 0.05
+        return (
+          <button
+            key={label}
+            onClick={() => onSelect(scale)}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8,
+              padding: '16px 20px', textAlign: 'left',
+              border: active ? '3px solid var(--primary)' : '2px solid var(--border)',
+              background: active ? 'var(--primary-50)' : 'var(--surface)',
+              borderRadius: 'var(--radius)', minHeight: 'var(--tap)',
+            }}
+          >
+            <span style={{ fontSize: 14, fontWeight: 700, color: active ? 'var(--primary)' : 'var(--text-soft)' }}>
+              {label} {active ? '✓ 현재 설정' : ''}
+            </span>
+            <span style={{ fontSize: `${Math.round(20 * scale)}px`, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
+              가나다 ABC 123
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function BookingHistoryPanel() {
+  const [bookings] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('silvermap_bookings') || '[]') } catch { return [] }
+  })
+
+  if (!bookings.length) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-soft)' }}>
+        <p style={{ fontSize: 60, marginBottom: 12 }}>📋</p>
+        <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>예약 내역이 없습니다</p>
+        <p style={{ fontSize: 'var(--fs-sm)', marginTop: 8, lineHeight: 1.6 }}>
+          예약 탭에서 예약을 완료하면 여기에 기록됩니다
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {bookings.map((b) => {
+        const d = new Date(b.savedAt)
+        const saved = `${d.getMonth() + 1}월 ${d.getDate()}일 예약`
+        return (
+          <div key={b.bookingNum} style={{
+            background: 'var(--surface)', borderRadius: 'var(--radius)',
+            border: '2px solid var(--border)', padding: '16px 18px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+              <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>{b.placeName}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-soft)', marginTop: 4, flexShrink: 0 }}>{saved}</span>
+            </div>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--text-soft)' }}>{b.programName}</div>
+            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--primary)', marginTop: 6 }}>
+              {b.date} · {b.people}명
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-soft)', marginTop: 6 }}>
+              예약번호: {b.bookingNum}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -22,12 +22,20 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
   const [heading, setHeading] = useState(initialHeading || '')
   const [recent, setRecent] = useState(getRecent)
   const [listening, setListening] = useState(false)
+  const [searchError, setSearchError] = useState(null)
+  const [voiceUnsupported, setVoiceUnsupported] = useState(false)
   const recRef = useRef(null)
 
   async function runSearch(promise, label) {
-    setLoading(true); setSearched(true); setHeading(label)
-    const places = await promise
-    setResults(places); onResults(places); setLoading(false)
+    setLoading(true); setSearched(true); setHeading(label); setSearchError(null)
+    try {
+      const places = await promise
+      setResults(places); onResults(places)
+    } catch {
+      setSearchError('검색 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+      setResults([]); onResults([])
+    }
+    setLoading(false)
   }
 
   function onSubmit(e) {
@@ -55,7 +63,7 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
 
   function startVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('이 브라우저는 음성 검색을 지원하지 않습니다.'); return }
+    if (!SR) { setVoiceUnsupported(true); setTimeout(() => setVoiceUnsupported(false), 3000); return }
     if (recRef.current) { recRef.current.stop(); return }
     const r = new SR()
     r.lang = 'ko-KR'
@@ -100,6 +108,12 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
           찾기
         </button>
       </form>
+
+      {voiceUnsupported && (
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', textAlign: 'center', marginTop: -6, marginBottom: 6 }}>
+          이 브라우저는 음성 검색을 지원하지 않아요
+        </p>
+      )}
 
       {/* 최근 검색어 */}
       {!searched && recent.length > 0 && (
@@ -222,13 +236,25 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
               {heading} ({results.length}곳)
             </p>
             <button
-              onClick={() => setSearched(false)}
+              onClick={() => { setSearched(false); setSearchError(null) }}
               style={{ fontSize: 15, color: 'var(--text-soft)', display: 'flex', alignItems: 'center', gap: 4 }}
             >
               <CloseIcon size={18} /> 닫기
             </button>
           </div>
-          {results.length === 0 ? (
+          {searchError ? (
+            <div style={{
+              background: '#fff3f0', border: '2px solid var(--danger)',
+              borderRadius: 'var(--radius)', padding: '18px 20px',
+            }}>
+              <p style={{ fontSize: 'var(--fs-base)', color: 'var(--danger)', fontWeight: 700 }}>
+                ⚠️ {searchError}
+              </p>
+              <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginTop: 8 }}>
+                인터넷 연결을 확인하고 다시 시도해주세요.
+              </p>
+            </div>
+          ) : results.length === 0 ? (
             <p style={{
               fontSize: 'var(--fs-base)', color: 'var(--text-soft)',
               background: 'var(--surface)', borderRadius: 'var(--radius)',

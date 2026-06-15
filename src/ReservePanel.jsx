@@ -40,10 +40,27 @@ const DEFAULT_PROGRAMS = [
   { id: 'def-3', name: '프로그램 문의', time: '평일 09:00 ~ 17:00', price: 5000, days: ['화', '목'] },
 ]
 
-const AVAILABLE_DATES = [
-  '5월 27일 (화)', '5월 28일 (수)', '5월 29일 (목)',
-  '5월 30일 (금)', '6월 2일 (월)',  '6월 3일 (화)',
-]
+function getAvailableDates() {
+  const DAYS = ['일', '월', '화', '수', '목', '금', '토']
+  const result = []
+  for (let i = 0; result.length < 6; i++) {
+    const d = new Date()
+    d.setDate(d.getDate() + i)
+    const day = d.getDay()
+    if (day === 0 || day === 6) continue
+    const prefix = i === 0 ? '오늘 ' : i === 1 ? '내일 ' : ''
+    result.push(`${prefix}${d.getMonth() + 1}월 ${d.getDate()}일 (${DAYS[day]})`)
+  }
+  return result
+}
+
+function saveBooking(data) {
+  try {
+    const prev = JSON.parse(localStorage.getItem('silvermap_bookings') || '[]')
+    prev.unshift(data)
+    localStorage.setItem('silvermap_bookings', JSON.stringify(prev.slice(0, 20)))
+  } catch {}
+}
 
 const CARD_COMPANIES = ['카드사 선택', '국민카드', '신한카드', '삼성카드', '현대카드', '롯데카드', '하나카드', '우리카드', 'NH농협카드']
 
@@ -56,6 +73,7 @@ export default function ReservePanel({ onTutAdvance, initialPlace, from }) {
   const [query, setQuery]         = useState('')
   const [results, setResults]     = useState(PLACES_MOCK)
   const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState(null)
   const [place, setPlace]         = useState(initialPlace || null)
   const [program, setProgram]     = useState(null)
   const [date, setDate]           = useState(null)
@@ -65,14 +83,15 @@ export default function ReservePanel({ onTutAdvance, initialPlace, from }) {
   async function search(e) {
     e?.preventDefault()
     const q = query.trim()
-    if (!q) { setResults(PLACES_MOCK); return }
+    if (!q) { setResults(PLACES_MOCK); setSearchError(null); return }
     setSearchLoading(true)
+    setSearchError(null)
     try {
       const places = await searchByKeyword(q, from)
       setResults(places.length > 0 ? places : [])
     } catch {
-      const fallback = PLACES_MOCK.filter(p => p.name.includes(q) || p.address.includes(q))
-      setResults(fallback)
+      setSearchError('검색 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+      setResults(PLACES_MOCK)
     }
     setSearchLoading(false)
     onTutAdvance?.()
@@ -82,13 +101,13 @@ export default function ReservePanel({ onTutAdvance, initialPlace, from }) {
   function selectProgram(pr){ setProgram(pr); setStep(2) }
 
   function goPayment() {
-    if (!date) { alert('날짜를 선택해주세요.'); return }
+    if (!date) return
     setStep(3)
   }
 
   function pay() {
-    console.warn('[ReservePanel] PG 결제 미연동 — 목업 완료 처리')
     const num = 'SLV' + Date.now().toString().slice(-8)
+    saveBooking({ bookingNum: num, placeName: place.name, programName: program.name, date, people, savedAt: new Date().toISOString() })
     setBookingNum(num)
     setStep(4)
   }
@@ -97,6 +116,7 @@ export default function ReservePanel({ onTutAdvance, initialPlace, from }) {
     setStep(0); setQuery(''); setResults(PLACES_MOCK)
     setPlace(null); setProgram(null)
     setDate(null); setPeople(1); setBookingNum('')
+    setSearchError(null)
   }
 
   function goBack() {
@@ -136,6 +156,7 @@ export default function ReservePanel({ onTutAdvance, initialPlace, from }) {
           query={query} setQuery={setQuery}
           results={results} onSearch={search}
           onSelect={selectPlace} loading={searchLoading}
+          searchError={searchError}
         />
       )}
       {step === 1 && (
@@ -162,7 +183,7 @@ export default function ReservePanel({ onTutAdvance, initialPlace, from }) {
 
 /* ===== 단계별 서브 컴포넌트 ===== */
 
-function SearchStep({ query, setQuery, results, onSearch, onSelect, loading }) {
+function SearchStep({ query, setQuery, results, onSearch, onSelect, loading, searchError }) {
   return (
     <>
       <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>어디를 예약할까요?</p>
@@ -191,13 +212,24 @@ function SearchStep({ query, setQuery, results, onSearch, onSelect, loading }) {
         </p>
       )}
 
-      {!loading && results.length === 0 && (
+      {!loading && searchError && (
+        <div style={{
+          background: '#fff3f0', border: '2px solid var(--danger)',
+          borderRadius: 'var(--radius)', padding: '16px 18px',
+        }}>
+          <p style={{ fontSize: 'var(--fs-base)', color: 'var(--danger)', fontWeight: 700 }}>
+            ⚠️ {searchError}
+          </p>
+        </div>
+      )}
+
+      {!loading && results.length === 0 && !searchError && (
         <p style={{ textAlign: 'center', color: 'var(--text-soft)', padding: 24, fontSize: 'var(--fs-base)' }}>
           검색 결과가 없습니다.
         </p>
       )}
 
-      {!loading && results.length > 0 && (
+      {!loading && !searchError && results.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {results.map((p, i) => (
             <button
@@ -274,6 +306,7 @@ function PlaceDetailStep({ place, onSelect }) {
 }
 
 function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }) {
+  const availableDates = useMemo(getAvailableDates, [])
   return (
     <>
       <div style={{
@@ -285,7 +318,7 @@ function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }
 
       <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 900 }}>날짜를 선택해주세요</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        {AVAILABLE_DATES.map((d) => (
+        {availableDates.map((d) => (
           <button
             key={d}
             onClick={() => setDate(d)}
@@ -329,9 +362,19 @@ function BookingDetailStep({ program, date, setDate, people, setPeople, onNext }
         >+</button>
       </div>
 
-      <button onClick={onNext} className="btn btn-primary" style={{ marginTop: 12, fontSize: 'var(--fs-lg)' }}>
+      <button
+        onClick={onNext}
+        disabled={!date}
+        className="btn btn-primary"
+        style={{ marginTop: 12, fontSize: 'var(--fs-lg)', opacity: date ? 1 : 0.45 }}
+      >
         예약 정보 확인
       </button>
+      {!date && (
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', textAlign: 'center', marginTop: 8 }}>
+          날짜를 선택해주세요
+        </p>
+      )}
     </>
   )
 }
@@ -342,6 +385,7 @@ function PaymentStep({ place, program, date, people, onPay }) {
   const [method, setMethod]       = useState(savedCard ? 'saved' : 'newcard')
   const [showCardForm, setShowCardForm] = useState(!savedCard)
   const [cardCompany, setCardCompany]   = useState('')
+  const [showFamilySheet, setShowFamilySheet] = useState(false)
 
   // 카드 입력 폼
   const [cardNum, setCardNum]   = useState('')
@@ -394,12 +438,7 @@ function PaymentStep({ place, program, date, people, onPay }) {
     if (saved) {
       window.location.href = `tel:${saved}`
     } else {
-      const num = window.prompt('자녀 전화번호를 입력해주세요\n(예: 010-1234-5678)')
-      if (num) {
-        const clean = num.replace(/[^0-9]/g, '')
-        localStorage.setItem('silvermap_family_tel', clean)
-        window.location.href = `tel:${clean}`
-      }
+      setShowFamilySheet(true)
     }
   }
 
@@ -433,6 +472,7 @@ function PaymentStep({ place, program, date, people, onPay }) {
         >
           📞 자녀에게 부탁하기
         </button>
+        {showFamilySheet && <FamilySheet onClose={() => setShowFamilySheet(false)} />}
       </>
     )
   }
@@ -670,7 +710,66 @@ function PaymentStep({ place, program, date, people, onPay }) {
       >
         📞 자녀에게 부탁하기
       </button>
+      {showFamilySheet && <FamilySheet onClose={() => setShowFamilySheet(false)} />}
     </>
+  )
+}
+
+function FamilySheet({ onClose }) {
+  const stored = localStorage.getItem('silvermap_family_tel') || ''
+  const fmt = stored ? stored.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3') : ''
+  const [tel, setTel] = useState(fmt)
+  const valid = tel.replace(/[^0-9]/g, '').length >= 9
+
+  function call() {
+    const clean = tel.replace(/[^0-9]/g, '')
+    if (!valid) return
+    localStorage.setItem('silvermap_family_tel', clean)
+    window.location.href = `tel:${clean}`
+    onClose()
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'rgba(16,30,58,.55)',
+        backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'flex-end',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--card)', width: '100%',
+          borderRadius: '24px 24px 0 0',
+          padding: '24px 24px max(24px, env(safe-area-inset-bottom))',
+          display: 'flex', flexDirection: 'column', gap: 14,
+        }}
+      >
+        <h3 style={{ fontSize: 'var(--fs-xl)', fontWeight: 900 }}>자녀에게 부탁하기</h3>
+        <p style={{ fontSize: 'var(--fs-base)', color: 'var(--text-soft)', lineHeight: 1.6 }}>
+          전화번호를 저장해두면 다음에 바로 전화할 수 있어요
+        </p>
+        <input
+          type="tel"
+          value={tel}
+          onChange={e => setTel(e.target.value)}
+          placeholder="010-1234-5678"
+          autoFocus
+          style={{
+            width: '100%', padding: '16px 18px', fontSize: 'var(--fs-lg)', fontWeight: 700,
+            border: '2px solid var(--border)', borderRadius: 'var(--radius)',
+            background: 'var(--surface)', outline: 'none', boxSizing: 'border-box',
+          }}
+        />
+        <button onClick={call} disabled={!valid} className="btn btn-primary" style={{ opacity: valid ? 1 : 0.45 }}>
+          📞 전화 걸기
+        </button>
+        <button onClick={onClose} className="btn btn-secondary">취소</button>
+      </div>
+    </div>
   )
 }
 
