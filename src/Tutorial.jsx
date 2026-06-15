@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import guideImg from './assets/guide.png'
 
 // 게임 튜토리얼 스타일 오버레이.
 // - 강조 대상 주변을 4개 dim 패널로 둘러쌈 → 대상 영역은 실제 클릭 가능.
@@ -43,20 +44,16 @@ function useTargetRect(selector, stepId) {
   return rect
 }
 
-// 친근한 안내 캐릭터 (안경 쓴 어르신)
-function Guide({ size = 56 }) {
+function Guide({ size = 72 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <circle cx="32" cy="30" r="18" fill="#ffe0b2" stroke="#15233b" strokeWidth="2" />
-      <path d="M16 26c2-10 12-14 18-12 6 2 12 6 14 12-4-2-10-2-16 0-6 2-12 2-16 0Z" fill="#bdbdbd" />
-      <circle cx="25" cy="32" r="5" fill="#fff" stroke="#15233b" strokeWidth="2.4" />
-      <circle cx="39" cy="32" r="5" fill="#fff" stroke="#15233b" strokeWidth="2.4" />
-      <path d="M30 32h4" stroke="#15233b" strokeWidth="2.4" strokeLinecap="round" />
-      <circle cx="25" cy="32" r="1.6" fill="#15233b" />
-      <circle cx="39" cy="32" r="1.6" fill="#15233b" />
-      <path d="M26 40c2 3 10 3 12 0" fill="none" stroke="#15233b" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M14 60c2-8 8-12 18-12s16 4 18 12" fill="#1957c8" />
-    </svg>
+    <img
+      src={guideImg}
+      width={size}
+      height={size}
+      alt=""
+      aria-hidden="true"
+      style={{ objectFit: 'contain', flexShrink: 0, borderRadius: '50%' }}
+    />
   )
 }
 

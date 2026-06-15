@@ -204,11 +204,45 @@ export default function SearchPanel({ from, onResults, onSelectPlace, initialRes
             })}
           </div>
 
+          {/* 음식·물건으로 찾기 */}
+          <div style={{ marginTop: 6, marginBottom: 6 }}>
+            <p style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--text-soft)', marginBottom: 10 }}>
+              먹고 싶은 것 · 사고 싶은 것
+            </p>
+            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-soft)', marginBottom: 12, lineHeight: 1.5 }}>
+              아래 버튼을 누르거나, 위 검색창에 직접 입력하세요
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {['파스타', '삼겹살', '순대국밥', '치킨', '설렁탕', '떡볶이', '커피', '빵', '약', '문구점'].map((item) => (
+                <button
+                  key={item}
+                  onClick={() => {
+                    setQuery(item)
+                    saveRecent(item); setRecent(getRecent())
+                    runSearch(searchByKeyword(item, from), `내 주변 '${item}'`)
+                  }}
+                  style={{
+                    padding: '12px 20px',
+                    borderRadius: 'var(--radius-pill)',
+                    background: 'var(--surface)',
+                    border: '2px solid var(--border)',
+                    fontSize: 'var(--fs-base)',
+                    fontWeight: 700,
+                    color: 'var(--text)',
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* 도움말 카드 */}
           <div style={{
             background: '#fff8e1', border: '2px solid #b25e00',
             borderRadius: 'var(--radius)', padding: '14px 16px',
             display: 'flex', alignItems: 'center', gap: 12,
+            marginTop: 8,
           }}>
             <span style={{ fontSize: 28 }}>?</span>
             <div>
