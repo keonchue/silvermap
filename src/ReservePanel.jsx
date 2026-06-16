@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { SearchIcon } from './icons.jsx'
 import { searchByKeyword } from './placesService.js'
 
